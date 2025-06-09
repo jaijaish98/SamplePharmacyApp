@@ -1,262 +1,187 @@
-import React, { useState } from 'react';
-import {
-  Search,
-  User,
-  Phone,
-  Mail,
-  Plus,
-  Upload,
-  Camera,
-  X,
-  Check,
-  Edit3
-} from 'lucide-react';
-import './CustomerPanel.css';
+import { useState } from 'react';
+import { Search, Plus, User, Phone, Mail, Upload, Camera } from 'lucide-react';
+import { useCustomer } from '../../contexts/CustomerContext';
+import { useBilling } from '../../contexts/BillingContext';
 
-const CustomerPanel = ({ customer, setCustomer }) => {
-  const [showAddCustomer, setShowAddCustomer] = useState(false);
+const CustomerPanel = () => {
+  const { customers, addCustomer } = useCustomer();
+  const { currentBill, setCustomer, setPrescription } = useBilling();
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     age: '',
-    gender: '',
+    gender: 'Male',
     phone: '',
     email: '',
     address: ''
   });
-  const [prescriptionFile, setPrescriptionFile] = useState(null);
 
-  // Sample customer data
-  const [customers] = useState([
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      age: 45,
-      gender: 'Male',
-      phone: '9876543210',
-      email: 'rajesh.kumar@email.com',
-      address: '123 Main Street, Chennai'
-    },
-    {
-      id: 2,
-      name: 'Priya Sharma',
-      age: 32,
-      gender: 'Female',
-      phone: '9876543211',
-      email: 'priya.sharma@email.com',
-      address: '456 Park Avenue, Chennai'
-    },
-    {
-      id: 3,
-      name: 'Suresh Patel',
-      age: 58,
-      gender: 'Male',
-      phone: '9876543212',
-      email: 'suresh.patel@email.com',
-      address: '789 Garden Road, Chennai'
+  // Filter customers based on search term
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.phone.includes(searchTerm) ||
+    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+  ).slice(0, 5); // Show only top 5 results
+
+  const handleCustomerSearch = (value) => {
+    setSearchTerm(value);
+    setShowSearchResults(value.length > 0);
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setCustomer(customer);
+    setSearchTerm(customer.name);
+    setShowSearchResults(false);
+  };
+
+  const handleAddNewCustomer = () => {
+    if (!newCustomer.name || !newCustomer.phone) {
+      alert('Name and phone number are required');
+      return;
     }
-  ]);
 
-  const filteredCustomers = customers.filter(cust =>
-    cust.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cust.phone.includes(searchTerm)
-  );
-
-  const handleAddCustomer = () => {
-    if (newCustomer.name && newCustomer.phone) {
-      const customerToAdd = {
-        id: Date.now(),
-        ...newCustomer,
-        age: parseInt(newCustomer.age) || 0
-      };
-      setCustomer(customerToAdd);
-      setNewCustomer({
-        name: '',
-        age: '',
-        gender: '',
-        phone: '',
-        email: '',
-        address: ''
-      });
-      setShowAddCustomer(false);
-    }
+    const customer = addCustomer(newCustomer);
+    setCustomer(customer);
+    setSearchTerm(customer.name);
+    setShowAddCustomer(false);
+    setNewCustomer({
+      name: '',
+      age: '',
+      gender: 'Male',
+      phone: '',
+      email: '',
+      address: ''
+    });
   };
 
   const handlePrescriptionUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      setPrescriptionFile(file);
+      // In a real app, this would upload the file and process it
+      const prescription = {
+        id: `RX${Date.now()}`,
+        fileName: file.name,
+        uploadDate: new Date(),
+        fileSize: file.size,
+        fileType: file.type
+      };
+      setPrescription(prescription);
     }
-  };
-
-  const clearCustomer = () => {
-    setCustomer(null);
-    setPrescriptionFile(null);
   };
 
   return (
     <div className="customer-panel">
-      <div className="customer-panel-header">
-        <h2>Customer Information</h2>
-        {customer && (
-          <button className="btn btn-outline btn-sm" onClick={clearCustomer}>
-            <X size={16} />
-            Clear
-          </button>
+      {/* Customer Search */}
+      <div className="customer-search">
+        <div className="search-input-container">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search customer by name, phone, or email..."
+            value={searchTerm}
+            onChange={(e) => handleCustomerSearch(e.target.value)}
+            className="customer-search-input"
+          />
+        </div>
+        
+        {showSearchResults && filteredCustomers.length > 0 && (
+          <div className="search-results">
+            {filteredCustomers.map((customer) => (
+              <div
+                key={customer.id}
+                className="search-result-item"
+                onClick={() => handleCustomerSelect(customer)}
+              >
+                <div className="result-name">{customer.name}</div>
+                <div className="result-details">
+                  <span>{customer.phone}</span>
+                  <span>{customer.email}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {!customer ? (
-        <div className="customer-search-section">
-          {/* Customer Search */}
-          <div className="customer-search">
-            <div className="search-container">
-              <Search size={18} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search customer by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowAddCustomer(true)}
-            >
-              <Plus size={18} />
-              Add New
-            </button>
-          </div>
+      {/* Add New Customer Button */}
+      <button 
+        className="btn btn-outline btn-small"
+        onClick={() => setShowAddCustomer(true)}
+      >
+        <Plus size={16} />
+        Add New Customer
+      </button>
 
-          {/* Customer Search Results */}
-          {searchTerm && (
-            <div className="customer-results">
-              {filteredCustomers.length > 0 ? (
-                filteredCustomers.map(cust => (
-                  <div 
-                    key={cust.id} 
-                    className="customer-result-item"
-                    onClick={() => setCustomer(cust)}
-                  >
-                    <div className="customer-info">
-                      <h4>{cust.name}</h4>
-                      <p>{cust.phone}</p>
-                      <p>{cust.age} years, {cust.gender}</p>
-                    </div>
-                    <button className="btn btn-sm btn-primary">
-                      Select
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="no-results">
-                  <p>No customers found</p>
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => setShowAddCustomer(true)}
-                  >
-                    Add New Customer
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Walk-in Customer Option */}
-          <div className="walk-in-option">
-            <button 
-              className="btn btn-secondary btn-large"
-              onClick={() => setCustomer({ id: 'walk-in', name: 'Walk-in Customer' })}
-            >
-              <User size={20} />
-              Continue as Walk-in Customer
-            </button>
+      {/* Selected Customer Info */}
+      {currentBill.customer && (
+        <div className="customer-info">
+          <div className="customer-name">
+            <User size={16} />
+            {currentBill.customer.name}
           </div>
-        </div>
-      ) : (
-        <div className="customer-details">
-          <div className="customer-info-display">
-            <div className="customer-basic-info">
-              <div className="customer-avatar">
-                <User size={24} />
-              </div>
-              <div className="customer-data">
-                <h3>{customer.name}</h3>
-                {customer.phone && (
-                  <p className="customer-contact">
-                    <Phone size={16} />
-                    {customer.phone}
-                  </p>
-                )}
-                {customer.email && (
-                  <p className="customer-contact">
-                    <Mail size={16} />
-                    {customer.email}
-                  </p>
-                )}
-                {customer.age && customer.gender && (
-                  <p className="customer-demographics">
-                    {customer.age} years, {customer.gender}
-                  </p>
-                )}
-              </div>
+          <div className="customer-details">
+            <div>
+              <Phone size={14} />
+              {currentBill.customer.phone}
             </div>
-            
-            <button className="btn btn-outline btn-sm">
-              <Edit3 size={16} />
-              Edit
-            </button>
-          </div>
-
-          {/* Prescription Upload */}
-          <div className="prescription-section">
-            <h4>Prescription</h4>
-            <div className="prescription-upload">
-              <input
-                type="file"
-                id="prescription-upload"
-                accept="image/*,.pdf"
-                onChange={handlePrescriptionUpload}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="prescription-upload" className="upload-btn">
-                <Upload size={18} />
-                Upload Prescription
-              </label>
-              <button className="btn btn-outline">
-                <Camera size={18} />
-                Take Photo
-              </button>
-            </div>
-            
-            {prescriptionFile && (
-              <div className="prescription-preview">
-                <p>📄 {prescriptionFile.name}</p>
-                <button 
-                  className="btn btn-sm btn-outline"
-                  onClick={() => setPrescriptionFile(null)}
-                >
-                  <X size={14} />
-                  Remove
-                </button>
+            {currentBill.customer.email && (
+              <div>
+                <Mail size={14} />
+                {currentBill.customer.email}
               </div>
             )}
+            <div>Age: {currentBill.customer.age || 'N/A'}</div>
+            <div>Gender: {currentBill.customer.gender || 'N/A'}</div>
           </div>
         </div>
       )}
 
+      {/* Prescription Upload */}
+      <div className="prescription-section">
+        <h4>Prescription Upload</h4>
+        <div className="upload-options">
+          <label className="upload-btn">
+            <Upload size={16} />
+            Upload File
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={handlePrescriptionUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
+          <button className="upload-btn">
+            <Camera size={16} />
+            Take Photo
+          </button>
+        </div>
+        
+        {currentBill.prescription && (
+          <div className="prescription-info">
+            <div className="prescription-file">
+              📄 {currentBill.prescription.fileName}
+            </div>
+            <div className="prescription-details">
+              Uploaded: {new Date(currentBill.prescription.uploadDate).toLocaleString()}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Add Customer Modal */}
       {showAddCustomer && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div className="modal-content">
             <div className="modal-header">
               <h3>Add New Customer</h3>
               <button 
-                className="btn btn-outline btn-sm"
+                className="btn-icon"
                 onClick={() => setShowAddCustomer(false)}
               >
-                <X size={16} />
+                ×
               </button>
             </div>
             
@@ -267,18 +192,9 @@ const CustomerPanel = ({ customer, setCustomer }) => {
                   <input
                     type="text"
                     value={newCustomer.name}
-                    onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-                    placeholder="Enter customer name"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Phone *</label>
-                  <input
-                    type="tel"
-                    value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-                    placeholder="Enter phone number"
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                    className="form-input"
+                    required
                   />
                 </div>
                 
@@ -287,8 +203,10 @@ const CustomerPanel = ({ customer, setCustomer }) => {
                   <input
                     type="number"
                     value={newCustomer.age}
-                    onChange={(e) => setNewCustomer({...newCustomer, age: e.target.value})}
-                    placeholder="Enter age"
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, age: e.target.value }))}
+                    className="form-input"
+                    min="1"
+                    max="120"
                   />
                 </div>
                 
@@ -296,32 +214,43 @@ const CustomerPanel = ({ customer, setCustomer }) => {
                   <label>Gender</label>
                   <select
                     value={newCustomer.gender}
-                    onChange={(e) => setNewCustomer({...newCustomer, gender: e.target.value})}
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, gender: e.target.value }))}
+                    className="form-input"
                   >
-                    <option value="">Select gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
                 
-                <div className="form-group form-group-full">
+                <div className="form-group">
+                  <label>Phone Number *</label>
+                  <input
+                    type="tel"
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
                   <label>Email</label>
                   <input
                     type="email"
                     value={newCustomer.email}
-                    onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-                    placeholder="Enter email address"
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                    className="form-input"
                   />
                 </div>
                 
-                <div className="form-group form-group-full">
+                <div className="form-group full-width">
                   <label>Address</label>
                   <textarea
                     value={newCustomer.address}
-                    onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
-                    placeholder="Enter address"
-                    rows="2"
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
+                    className="form-input"
+                    rows="3"
                   />
                 </div>
               </div>
@@ -336,10 +265,8 @@ const CustomerPanel = ({ customer, setCustomer }) => {
               </button>
               <button 
                 className="btn btn-primary"
-                onClick={handleAddCustomer}
-                disabled={!newCustomer.name || !newCustomer.phone}
+                onClick={handleAddNewCustomer}
               >
-                <Check size={16} />
                 Add Customer
               </button>
             </div>

@@ -1,11 +1,16 @@
 import { useState } from 'react'
+import { ThemeProvider } from './contexts/ThemeContext'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 import InventoryManagement from './components/InventoryManagement'
-// import StockManagement from './components/StockManagement'
-// import BillingSystem from './components/BillingSystem'
+import StockManagement from './components/StockManagement'
+import BillingSystem from './components/BillingSystem'
 import SalesRevenue from './components/SalesRevenue'
+import ReportsAnalytics from './components/ReportsAnalytics'
+import CustomerManagement from './components/CustomerManagement'
+import PrescriptionManagement from './components/PrescriptionManagement'
+import SupplierManagement from './components/SupplierManagement'
 import Settings from './components/Settings'
 import './App.css'
 
@@ -16,22 +21,22 @@ function App() {
     switch (activeSection) {
       case 'dashboard':
         return <Dashboard />
-      case 'stock':
-        return <div className="coming-soon">Sales & Revenue - Coming Soon</div>
       case 'inventory':
         return <InventoryManagement />
+      case 'stock':
+        return <StockManagement />
       case 'billing':
-        return <div className="coming-soon">Sales & Revenue - Coming Soon</div>
+        return <BillingSystem />
       case 'sales':
         return <SalesRevenue />
       case 'reports':
-        return <div className="coming-soon">Reports & Analytics - Coming Soon</div>
+        return <ReportsAnalytics />
       case 'customers':
-        return <div className="coming-soon">Customer Management - Coming Soon</div>
+        return <CustomerManagement />
       case 'prescriptions':
-        return <div className="coming-soon">Prescription Management - Coming Soon</div>
+        return <PrescriptionManagement />
       case 'suppliers':
-        return <div className="coming-soon">Supplier Management - Coming Soon</div>
+        return <SupplierManagement />
       case 'settings':
         return <Settings />
       default:
@@ -40,15 +45,17 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-      <div className="main-content">
-        <Header activeSection={activeSection} />
-        <main className="content">
-          {renderContent()}
-        </main>
+    <ThemeProvider>
+      <div className="app">
+        <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        <div className="main-content">
+          <Header activeSection={activeSection} />
+          <main className="content">
+            {renderContent()}
+          </main>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   )
 }
 

@@ -1,222 +1,249 @@
-import React from 'react';
-import {
-  X,
-  Printer,
-  Download,
-  Send,
-  Receipt,
-  Calendar,
-  User,
-  Phone,
-  Package
-} from 'lucide-react';
-import './InvoiceModal.css';
+import { useState } from 'react';
+import { Printer, Download, Mail, Copy } from 'lucide-react';
+import { format } from 'date-fns';
 
-const InvoiceModal = ({ bill, onClose }) => {
-  const handlePrint = () => {
-    window.print();
+const InvoiceModal = ({ invoice, onClose }) => {
+  const [printing, setPrinting] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
-  const handleDownload = () => {
-    // In a real implementation, this would generate and download a PDF
+  const handlePrint = async () => {
+    setPrinting(true);
+    // Simulate printing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setPrinting(false);
+    alert('Invoice printed successfully!');
+  };
+
+  const handleDownloadPDF = () => {
+    // In a real app, this would generate and download a PDF
     alert('PDF download functionality would be implemented here');
   };
 
-  const handleEmail = () => {
-    // In a real implementation, this would open email composer or send email
-    alert('Email functionality would be implemented here');
+  const handleEmailInvoice = async () => {
+    if (!invoice.customer?.email) {
+      alert('Customer email not available');
+      return;
+    }
+    
+    setEmailSending(true);
+    // Simulate email sending
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setEmailSending(false);
+    alert(`Invoice emailed to ${invoice.customer.email}`);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+  const handleCopyInvoice = () => {
+    // Copy invoice details to clipboard
+    const invoiceText = `
+Invoice: ${invoice.invoiceNumber}
+Date: ${format(new Date(invoice.date), 'dd/MM/yyyy HH:mm')}
+Customer: ${invoice.customer?.name || 'Walk-in Customer'}
+Total: ${formatCurrency(invoice.total)}
+    `;
+    navigator.clipboard.writeText(invoiceText);
+    alert('Invoice details copied to clipboard');
   };
 
   return (
-    <div className="invoice-modal-overlay">
-      <div className="invoice-modal">
-        <div className="invoice-header">
-          <h2>Invoice Generated</h2>
-          <button className="close-btn" onClick={onClose}>
-            <X size={20} />
-          </button>
+    <div className="modal-overlay">
+      <div className="modal-content invoice-modal">
+        <div className="modal-header">
+          <h3>Invoice Generated</h3>
+          <button className="btn-icon" onClick={onClose}>×</button>
         </div>
 
-        <div className="invoice-actions">
-          <button className="btn btn-outline" onClick={handlePrint}>
-            <Printer size={16} />
-            Print
-          </button>
-          <button className="btn btn-outline" onClick={handleDownload}>
-            <Download size={16} />
-            Download PDF
-          </button>
-          <button className="btn btn-outline" onClick={handleEmail}>
-            <Send size={16} />
-            Email
-          </button>
-        </div>
-
-        <div className="invoice-content" id="invoice-print">
-          {/* Pharmacy Header */}
-          <div className="pharmacy-header">
-            <div className="pharmacy-logo">
-              <Package size={32} />
-            </div>
-            <div className="pharmacy-info">
-              <h1>Sathya Pharmacy</h1>
-              <p>123 Main Street, Chennai - 600001</p>
-              <p>Phone: +91 98765 43210 | Email: info@sathyapharmacy.com</p>
-              <p>Drug License No: DL-TN-12345 | GST No: 33ABCDE1234F1Z5</p>
-            </div>
-          </div>
-
-          {/* Invoice Details */}
-          <div className="invoice-details">
-            <div className="invoice-meta">
-              <div className="invoice-number">
-                <h3>Invoice #{bill.invoiceNo}</h3>
-                <p className="invoice-date">
-                  <Calendar size={16} />
-                  {formatDate(bill.timestamp)}
-                </p>
+        <div className="modal-body">
+          {/* Invoice Preview */}
+          <div className="invoice-preview">
+            {/* Pharmacy Header */}
+            <div className="invoice-header">
+              <div className="pharmacy-info">
+                <h2>Sathya Pharmacy</h2>
+                <p>123 Main Street, Mumbai, Maharashtra 400001</p>
+                <p>Phone: +91 98765 43210 | Email: info@sathyapharmacy.com</p>
+                <p>Drug License No: DL-MH-12345 | GST No: 27ABCDE1234F1Z5</p>
               </div>
-              
-              <div className="customer-details">
-                <h4>Bill To:</h4>
-                {bill.customer ? (
-                  <div className="customer-info">
-                    <p className="customer-name">
-                      <User size={16} />
-                      {bill.customer.name}
-                    </p>
-                    {bill.customer.phone && (
-                      <p className="customer-phone">
-                        <Phone size={16} />
-                        {bill.customer.phone}
-                      </p>
-                    )}
-                    {bill.customer.address && (
-                      <p className="customer-address">{bill.customer.address}</p>
-                    )}
-                  </div>
-                ) : (
-                  <p>Walk-in Customer</p>
+              <div className="invoice-details">
+                <h3>INVOICE</h3>
+                <p><strong>Invoice No:</strong> {invoice.invoiceNumber}</p>
+                <p><strong>Date:</strong> {format(new Date(invoice.date), 'dd/MM/yyyy')}</p>
+                <p><strong>Time:</strong> {format(new Date(invoice.date), 'HH:mm:ss')}</p>
+                <p><strong>Cashier:</strong> {invoice.cashier}</p>
+              </div>
+            </div>
+
+            {/* Customer Information */}
+            <div className="customer-section">
+              <h4>Bill To:</h4>
+              <div className="customer-info">
+                <p><strong>Name:</strong> {invoice.customer?.name || 'Walk-in Customer'}</p>
+                {invoice.customer?.phone && (
+                  <p><strong>Phone:</strong> {invoice.customer.phone}</p>
+                )}
+                {invoice.customer?.email && (
+                  <p><strong>Email:</strong> {invoice.customer.email}</p>
+                )}
+                {invoice.prescriptionId && (
+                  <p><strong>Prescription ID:</strong> {invoice.prescriptionId}</p>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Items Table */}
-          <div className="invoice-items">
-            <table className="items-table">
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Medicine Details</th>
-                  <th>Batch No</th>
-                  <th>Expiry</th>
-                  <th>Qty</th>
-                  <th>MRP</th>
-                  <th>Rate</th>
-                  <th>Discount</th>
-                  <th>GST</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bill.items.map((item, index) => {
-                  const itemTotal = (item.quantity * item.sellingPrice) - (item.discount || 0);
-                  const gstAmount = itemTotal * (item.gstRate / 100);
-                  const finalAmount = itemTotal + gstAmount;
-                  
-                  return (
+            {/* Items Table */}
+            <div className="items-section">
+              <table className="invoice-table">
+                <thead>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Item Description</th>
+                    <th>Batch No</th>
+                    <th>Expiry</th>
+                    <th>Qty</th>
+                    <th>MRP</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoice.items.map((item, index) => (
                     <tr key={item.id}>
                       <td>{index + 1}</td>
                       <td>
-                        <div className="item-details">
-                          <strong>{item.name}</strong>
-                          <br />
-                          <small>{item.brand} - {item.composition}</small>
+                        <div className="item-description">
+                          <div className="item-name">{item.name}</div>
+                          <div className="item-brand">{item.brand}</div>
                         </div>
                       </td>
-                      <td>{item.batchNo}</td>
-                      <td>{new Date(item.expiry).toLocaleDateString()}</td>
+                      <td>{item.batchNumber}</td>
+                      <td>{format(new Date(item.expiryDate), 'MM/yy')}</td>
                       <td>{item.quantity}</td>
-                      <td>₹{item.mrp}</td>
-                      <td>₹{item.sellingPrice}</td>
-                      <td>₹{(item.discount || 0).toFixed(2)}</td>
-                      <td>{item.gstRate}%</td>
-                      <td>₹{finalAmount.toFixed(2)}</td>
+                      <td>{formatCurrency(item.mrp)}</td>
+                      <td>{formatCurrency(item.unitPrice)}</td>
+                      <td>{formatCurrency(item.total)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Invoice Summary */}
-          <div className="invoice-summary">
-            <div className="summary-section">
-              <div className="summary-row">
-                <span>Subtotal:</span>
-                <span>₹{bill.billSummary.subtotal}</span>
-              </div>
-              <div className="summary-row">
-                <span>Discount:</span>
-                <span>-₹{bill.billSummary.discount}</span>
-              </div>
-              <div className="summary-row">
-                <span>GST:</span>
-                <span>+₹{bill.billSummary.gst}</span>
-              </div>
-              <div className="summary-row total-row">
-                <span>Total Amount:</span>
-                <span>₹{bill.billSummary.total}</span>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
 
-          {/* Payment Details */}
-          <div className="payment-details">
-            <h4>Payment Details</h4>
-            <div className="payment-info">
-              <div className="payment-method">
-                <span>Payment Method:</span>
-                <span className="method-badge">{bill.payment.method.toUpperCase()}</span>
-              </div>
-              <div className="payment-amount">
-                <span>Amount Paid:</span>
-                <span>₹{bill.payment.amount.toFixed(2)}</span>
-              </div>
-              {bill.payment.change > 0 && (
-                <div className="payment-change">
-                  <span>Change Returned:</span>
-                  <span>₹{bill.payment.change.toFixed(2)}</span>
+            {/* Totals Section */}
+            <div className="totals-section">
+              <div className="totals-grid">
+                <div className="total-row">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(invoice.subtotal)}</span>
                 </div>
-              )}
+                {invoice.discount > 0 && (
+                  <div className="total-row">
+                    <span>Discount:</span>
+                    <span>-{formatCurrency(invoice.discount)}</span>
+                  </div>
+                )}
+                <div className="total-row">
+                  <span>Taxable Amount:</span>
+                  <span>{formatCurrency(invoice.subtotal - invoice.discount)}</span>
+                </div>
+                {invoice.gstDetails && (
+                  <>
+                    <div className="total-row">
+                      <span>CGST (9%):</span>
+                      <span>{formatCurrency(invoice.gstDetails.cgst)}</span>
+                    </div>
+                    <div className="total-row">
+                      <span>SGST (9%):</span>
+                      <span>{formatCurrency(invoice.gstDetails.sgst)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="total-row grand-total">
+                  <span>Total Amount:</span>
+                  <span>{formatCurrency(invoice.total)}</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="invoice-footer">
-            <div className="footer-note">
-              <p><strong>Thank you for your business!</strong></p>
-              <p>For any queries, please contact us at +91 98765 43210</p>
-              <p>This is a computer-generated invoice and does not require a signature.</p>
+            {/* Payment Information */}
+            <div className="payment-section">
+              <div className="payment-info">
+                <p><strong>Payment Method:</strong> {invoice.paymentMethod}</p>
+                <p><strong>Amount Paid:</strong> {formatCurrency(invoice.amountPaid || invoice.total)}</p>
+                {invoice.changeReturned > 0 && (
+                  <p><strong>Change Returned:</strong> {formatCurrency(invoice.changeReturned)}</p>
+                )}
+              </div>
             </div>
-            
-            <div className="footer-legal">
-              <p><small>Terms & Conditions Apply | Goods once sold cannot be returned</small></p>
-              <p><small>This invoice is subject to Chennai jurisdiction only</small></p>
+
+            {/* Footer */}
+            <div className="invoice-footer">
+              <div className="footer-notes">
+                {invoice.notes && (
+                  <p><strong>Notes:</strong> {invoice.notes}</p>
+                )}
+                <p>Thank you for your business!</p>
+                <p>For any queries, please contact us at +91 98765 43210</p>
+              </div>
+              <div className="footer-legal">
+                <p>This is a computer generated invoice and does not require signature.</p>
+                <p>Goods once sold cannot be returned without valid reason.</p>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-primary" onClick={onClose}>
-            <Receipt size={16} />
-            New Bill
-          </button>
+          <div className="invoice-actions">
+            <button 
+              className={`btn btn-outline ${printing ? 'loading' : ''}`}
+              onClick={handlePrint}
+              disabled={printing}
+            >
+              <Printer size={16} />
+              {printing ? 'Printing...' : 'Print Invoice'}
+            </button>
+            
+            <button 
+              className="btn btn-outline"
+              onClick={handleDownloadPDF}
+            >
+              <Download size={16} />
+              Download PDF
+            </button>
+            
+            {invoice.customer?.email && (
+              <button 
+                className={`btn btn-outline ${emailSending ? 'loading' : ''}`}
+                onClick={handleEmailInvoice}
+                disabled={emailSending}
+              >
+                <Mail size={16} />
+                {emailSending ? 'Sending...' : 'Email Invoice'}
+              </button>
+            )}
+            
+            <button 
+              className="btn btn-outline"
+              onClick={handleCopyInvoice}
+            >
+              <Copy size={16} />
+              Copy Details
+            </button>
+            
+            <button 
+              className="btn btn-primary"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

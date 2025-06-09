@@ -1,212 +1,213 @@
-import { useState } from 'react'
+import { useState } from 'react';
 import { 
-  Activity, 
-  Plus, 
-  Minus,
+  Package, 
   AlertTriangle, 
+  Search, 
+  Filter,
   BarChart3,
-  Search,
   RefreshCw,
-  ArrowUpDown,
-  Package,
+  Settings,
   TrendingUp,
-  TrendingDown,
-  Clock,
-  DollarSign
-} from 'lucide-react'
-import StockOverview from './stock/StockOverview'
-import StockAdjustment from './stock/StockAdjustment'
-import LowStockAlerts from './stock/LowStockAlerts'
-import StockTransfer from './stock/StockTransfer'
-import StockReports from './stock/StockReports'
-import StockHistory from './stock/StockHistory'
-import './StockManagement.css'
+  ArrowUpDown,
+  FileText,
+  Calendar,
+  Activity
+} from 'lucide-react';
+import { StockProvider } from '../contexts/StockContext';
+import StockOverview from './stock/StockOverview';
+import LowStockAlerts from './stock/LowStockAlerts';
+import StockSearch from './stock/StockSearch';
+import StockAdjustment from './stock/StockAdjustment';
+import StockTransfer from './stock/StockTransfer';
+import StockReports from './stock/StockReports';
+import StockHistory from './stock/StockHistory';
+import './StockManagement.css';
 
 const StockManagement = () => {
-  const [activeTab, setActiveTab] = useState('overview')
-  const [showStockAdjustment, setShowStockAdjustment] = useState(false)
-  const [showStockTransfer, setShowStockTransfer] = useState(false)
-  const [adjustmentType, setAdjustmentType] = useState('add') // 'add' or 'reduce'
+  const [activeTab, setActiveTab] = useState('overview');
+  const [refreshing, setRefreshing] = useState(false);
 
   const tabs = [
-    { id: 'overview', label: 'Stock Overview', icon: Package },
-    { id: 'alerts', label: 'Low Stock Alerts', icon: AlertTriangle },
-    { id: 'history', label: 'Stock History', icon: Clock },
-    { id: 'transfer', label: 'Stock Transfer', icon: ArrowUpDown },
-    { id: 'reports', label: 'Stock Reports', icon: BarChart3 },
-  ]
-
-  const stats = [
-    {
-      title: 'Total Stock Value',
-      value: '₹12,45,680',
-      change: '+8.5%',
-      trend: 'up',
-      icon: DollarSign,
-      color: 'green'
-    },
-    {
-      title: 'Items in Stock',
-      value: '1,247',
-      change: '+12',
-      trend: 'up',
+    { 
+      id: 'overview', 
+      label: 'Stock Overview', 
       icon: Package,
-      color: 'blue'
+      description: 'Real-time stock levels and quick stats'
     },
-    {
-      title: 'Low Stock Items',
-      value: '23',
-      change: '-5',
-      trend: 'down',
+    { 
+      id: 'alerts', 
+      label: 'Low Stock Alerts', 
       icon: AlertTriangle,
-      color: 'orange'
+      description: 'Monitor low stock and reorder alerts'
     },
-    {
-      title: 'Out of Stock',
-      value: '8',
-      change: '+2',
-      trend: 'up',
-      icon: TrendingDown,
-      color: 'red'
+    { 
+      id: 'search', 
+      label: 'Stock Search', 
+      icon: Search,
+      description: 'Advanced stock search and filtering'
+    },
+    { 
+      id: 'adjustment', 
+      label: 'Stock Adjustment', 
+      icon: Settings,
+      description: 'Manual stock adjustments and corrections'
+    },
+    { 
+      id: 'transfer', 
+      label: 'Stock Transfer', 
+      icon: ArrowUpDown,
+      description: 'Transfer stock between branches'
+    },
+    { 
+      id: 'reports', 
+      label: 'Stock Reports', 
+      icon: BarChart3,
+      description: 'Comprehensive stock analytics and reports'
+    },
+    { 
+      id: 'history', 
+      label: 'Stock History', 
+      icon: Activity,
+      description: 'Track all stock movements and changes'
     }
-  ]
+  ];
 
-  const handleStockAdd = () => {
-    setAdjustmentType('add')
-    setShowStockAdjustment(true)
-  }
-
-  const handleStockReduce = () => {
-    setAdjustmentType('reduce')
-    setShowStockAdjustment(true)
-  }
-
-  const handleCloseAdjustment = () => {
-    setShowStockAdjustment(false)
-  }
-
-  const handleCloseTransfer = () => {
-    setShowStockTransfer(false)
-  }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Simulate data refresh
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setRefreshing(false);
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return (
-          <StockOverview 
-            onStockAdd={handleStockAdd}
-            onStockReduce={handleStockReduce}
-            onStockTransfer={() => setShowStockTransfer(true)}
-          />
-        )
+        return <StockOverview />;
       case 'alerts':
-        return <LowStockAlerts />
-      case 'history':
-        return <StockHistory />
+        return <LowStockAlerts />;
+      case 'search':
+        return <StockSearch />;
+      case 'adjustment':
+        return <StockAdjustment />;
       case 'transfer':
-        return <StockTransfer />
+        return <StockTransfer />;
       case 'reports':
-        return <StockReports />
+        return <StockReports />;
+      case 'history':
+        return <StockHistory />;
       default:
-        return <StockOverview onStockAdd={handleStockAdd} onStockReduce={handleStockReduce} />
+        return <StockOverview />;
     }
-  }
+  };
+
+  const activeTabInfo = tabs.find(tab => tab.id === activeTab);
 
   return (
-    <div className="stock-management">
-      <div className="stock-header">
-        <div className="header-content">
-          <h1>Stock Management</h1>
-          <p>Real-time stock tracking, alerts, and management</p>
-        </div>
-        <div className="header-actions">
-          <button 
-            className="btn btn-secondary"
-            onClick={() => setShowStockTransfer(true)}
-          >
-            <ArrowUpDown size={20} />
-            Transfer Stock
-          </button>
-          <button 
-            className="btn btn-danger"
-            onClick={handleStockReduce}
-          >
-            <Minus size={20} />
-            Reduce Stock
-          </button>
-          <button 
-            className="btn btn-primary"
-            onClick={handleStockAdd}
-          >
-            <Plus size={20} />
-            Add Stock
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="stock-stats">
-        {stats.map((stat, index) => {
-          const IconComponent = stat.icon
-          return (
-            <div key={index} className={`stat-card ${stat.color}`}>
-              <div className="stat-icon">
-                <IconComponent size={24} />
-              </div>
-              <div className="stat-content">
-                <h3 className="stat-title">{stat.title}</h3>
-                <div className="stat-value">{stat.value}</div>
-                <div className={`stat-change ${stat.trend}`}>
-                  {stat.trend === 'up' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                  <span>{stat.change}</span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="stock-tabs">
-        {tabs.map((tab) => {
-          const IconComponent = tab.icon
-          return (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+    <StockProvider>
+      <div className="stock-management">
+        {/* Header Section */}
+        <div className="stock-header">
+          <div className="header-content">
+            <h1>Stock Management</h1>
+            <p>Real-time stock control with automated alerts, adjustments, and comprehensive reporting</p>
+          </div>
+          <div className="header-actions">
+            <button 
+              className={`btn btn-secondary ${refreshing ? 'loading' : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
             >
-              <IconComponent size={20} />
-              <span>{tab.label}</span>
+              <RefreshCw size={20} className={refreshing ? 'spinning' : ''} />
+              {refreshing ? 'Refreshing...' : 'Refresh Stock'}
             </button>
-          )
-        })}
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="quick-stats">
+          <div className="stat-card primary">
+            <div className="stat-icon">
+              <Package size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">1,247</div>
+              <div className="stat-label">Total Items</div>
+              <div className="stat-change up">+12 this week</div>
+            </div>
+          </div>
+          
+          <div className="stat-card warning">
+            <div className="stat-icon">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">23</div>
+              <div className="stat-label">Low Stock Alerts</div>
+              <div className="stat-change down">-5 from yesterday</div>
+            </div>
+          </div>
+          
+          <div className="stat-card danger">
+            <div className="stat-icon">
+              <Package size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">7</div>
+              <div className="stat-label">Out of Stock</div>
+              <div className="stat-change">Immediate attention needed</div>
+            </div>
+          </div>
+          
+          <div className="stat-card success">
+            <div className="stat-icon">
+              <TrendingUp size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">₹8.45L</div>
+              <div className="stat-label">Stock Value</div>
+              <div className="stat-change up">+15% from last month</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="stock-tabs">
+          {tabs.map((tab) => {
+            const IconComponent = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                title={tab.description}
+              >
+                <IconComponent size={20} />
+                <span className="tab-label">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Tab Info */}
+        {activeTabInfo && (
+          <div className="tab-info">
+            <div className="tab-info-content">
+              <h2>{activeTabInfo.label}</h2>
+              <p>{activeTabInfo.description}</p>
+            </div>
+            <div className="tab-info-actions">
+              <span>Last updated: {new Date().toLocaleTimeString()}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content */}
+        <div className="tab-content">
+          {renderTabContent()}
+        </div>
       </div>
+    </StockProvider>
+  );
+};
 
-      {/* Tab Content */}
-      <div className="tab-content">
-        {renderTabContent()}
-      </div>
-
-      {/* Stock Adjustment Modal */}
-      {showStockAdjustment && (
-        <StockAdjustment
-          type={adjustmentType}
-          onClose={handleCloseAdjustment}
-          onSave={handleCloseAdjustment}
-        />
-      )}
-
-      {/* Stock Transfer Modal */}
-      {showStockTransfer && (
-        <StockTransfer
-          onClose={handleCloseTransfer}
-          onSave={handleCloseTransfer}
-          isModal={true}
-        />
-      )}
-    </div>
-  )
-}
-
-export default StockManagement
+export default StockManagement;

@@ -1,270 +1,241 @@
-import React, { useState, useEffect } from 'react';
-import {
-  CreditCard,
-  Smartphone,
-  Wallet,
-  DollarSign,
-  Calculator,
-  Check,
-  Clock,
-  ArrowRight
-} from 'lucide-react';
-import './PaymentPanel.css';
+import { useState } from 'react';
+import { CreditCard, DollarSign, Smartphone, Wallet, Calculator } from 'lucide-react';
+import { useBilling } from '../../contexts/BillingContext';
 
-const PaymentPanel = ({ 
-  billSummary, 
-  payment, 
-  setPayment, 
-  onProcessBill, 
-  onHoldBill, 
-  isHoldMode, 
-  disabled 
-}) => {
-  const [splitPayment, setSplitPayment] = useState(false);
-  const [splitAmounts, setSplitAmounts] = useState({
-    cash: 0,
-    card: 0,
-    upi: 0
-  });
+const PaymentPanel = ({ onClose, onPaymentComplete }) => {
+  const { currentBill, processPayment } = useBilling();
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [amountReceived, setAmountReceived] = useState(currentBill.total.toString());
+  const [processing, setProcessing] = useState(false);
 
-  const totalAmount = parseFloat(billSummary.total);
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const calculateChange = () => {
+    const received = parseFloat(amountReceived) || 0;
+    return Math.max(0, received - currentBill.total);
+  };
+
+  const handlePayment = async () => {
+    if (paymentMethod === 'Cash' && parseFloat(amountReceived) < currentBill.total) {
+      alert('Amount received cannot be less than total amount');
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const paymentDetails = {
+        method: paymentMethod,
+        amountPaid: parseFloat(amountReceived),
+        changeReturned: paymentMethod === 'Cash' ? calculateChange() : 0
+      };
+
+      const invoice = await processPayment(paymentDetails);
+      onPaymentComplete(invoice);
+    } catch (error) {
+      alert('Payment processing failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const paymentMethods = [
-    { id: 'cash', label: 'Cash', icon: DollarSign, color: '#10b981' },
-    { id: 'card', label: 'Card', icon: CreditCard, color: '#3b82f6' },
-    { id: 'upi', label: 'UPI', icon: Smartphone, color: '#8b5cf6' },
-    { id: 'wallet', label: 'Wallet', icon: Wallet, color: '#f59e0b' }
+    { id: 'Cash', label: 'Cash', icon: DollarSign, color: '#10b981' },
+    { id: 'Card', label: 'Card', icon: CreditCard, color: '#3b82f6' },
+    { id: 'UPI', label: 'UPI', icon: Smartphone, color: '#8b5cf6' },
+    { id: 'Wallet', label: 'Wallet', icon: Wallet, color: '#f59e0b' }
   ];
 
-  // Calculate change for cash payments
-  useEffect(() => {
-    if (payment.method === 'cash' && payment.amount > 0) {
-      const change = payment.amount - totalAmount;
-      setPayment(prev => ({ ...prev, change: Math.max(0, change) }));
-    } else {
-      setPayment(prev => ({ ...prev, change: 0 }));
-    }
-  }, [payment.amount, payment.method, totalAmount, setPayment]);
-
-  const handlePaymentMethodChange = (method) => {
-    setPayment({
-      method,
-      amount: method === 'cash' ? 0 : totalAmount,
-      change: 0
-    });
-    setSplitPayment(false);
-  };
-
-  const handleAmountChange = (amount) => {
-    setPayment(prev => ({ ...prev, amount: parseFloat(amount) || 0 }));
-  };
-
-  const handleSplitPaymentToggle = () => {
-    setSplitPayment(!splitPayment);
-    if (!splitPayment) {
-      setSplitAmounts({
-        cash: totalAmount / 2,
-        card: totalAmount / 2,
-        upi: 0
-      });
-    }
-  };
-
-  const handleSplitAmountChange = (method, amount) => {
-    setSplitAmounts(prev => ({ ...prev, [method]: parseFloat(amount) || 0 }));
-  };
-
-  const getSplitTotal = () => {
-    return Object.values(splitAmounts).reduce((sum, amount) => sum + amount, 0);
-  };
-
-  const isPaymentValid = () => {
-    if (splitPayment) {
-      return Math.abs(getSplitTotal() - totalAmount) < 0.01;
-    }
-    
-    if (payment.method === 'cash') {
-      return payment.amount >= totalAmount;
-    }
-    
-    return payment.amount === totalAmount;
-  };
-
-  const getQuickAmounts = () => {
-    const amounts = [
-      Math.ceil(totalAmount),
-      Math.ceil(totalAmount / 100) * 100,
-      Math.ceil(totalAmount / 500) * 500,
-      Math.ceil(totalAmount / 1000) * 1000
-    ];
-    return [...new Set(amounts)].sort((a, b) => a - b);
-  };
-
   return (
-    <div className="payment-panel">
-      <div className="payment-header">
-        <h3>Payment</h3>
-        <div className="payment-amount">
-          ₹{billSummary.total}
+    <div className="modal-overlay">
+      <div className="modal-content payment-modal">
+        <div className="modal-header">
+          <h3>Process Payment</h3>
+          <button className="btn-icon" onClick={onClose}>×</button>
         </div>
-      </div>
 
-      {/* Payment Methods */}
-      <div className="payment-methods">
-        <h4>Payment Method</h4>
-        <div className="payment-method-grid">
-          {paymentMethods.map(method => {
-            const IconComponent = method.icon;
-            return (
-              <button
-                key={method.id}
-                className={`payment-method-btn ${payment.method === method.id ? 'active' : ''}`}
-                onClick={() => handlePaymentMethodChange(method.id)}
-                style={{ '--method-color': method.color }}
-              >
-                <IconComponent size={20} />
-                <span>{method.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Split Payment Toggle */}
-      <div className="split-payment-toggle">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
-            checked={splitPayment}
-            onChange={handleSplitPaymentToggle}
-          />
-          <span className="toggle-slider"></span>
-          Split Payment
-        </label>
-      </div>
-
-      {/* Payment Amount Section */}
-      {!splitPayment ? (
-        <div className="payment-amount-section">
-          <h4>Amount</h4>
-          
-          {payment.method === 'cash' && (
-            <div className="quick-amounts">
-              {getQuickAmounts().map(amount => (
-                <button
-                  key={amount}
-                  className="quick-amount-btn"
-                  onClick={() => handleAmountChange(amount)}
-                >
-                  ₹{amount}
-                </button>
-              ))}
+        <div className="modal-body">
+          {/* Bill Summary */}
+          <div className="payment-summary">
+            <h4>Bill Summary</h4>
+            <div className="summary-details">
+              <div className="summary-row">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(currentBill.subtotal)}</span>
+              </div>
+              {currentBill.discount > 0 && (
+                <div className="summary-row">
+                  <span>Discount:</span>
+                  <span>-{formatCurrency(currentBill.discount)}</span>
+                </div>
+              )}
+              <div className="summary-row">
+                <span>GST:</span>
+                <span>{formatCurrency(currentBill.gstAmount)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>Total Amount:</span>
+                <span>{formatCurrency(currentBill.total)}</span>
+              </div>
             </div>
-          )}
-          
-          <div className="amount-input-container">
-            <input
-              type="number"
-              value={payment.amount || ''}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder="Enter amount"
-              className="amount-input"
-              step="0.01"
-              min="0"
-            />
-            <span className="currency-symbol">₹</span>
           </div>
 
-          {payment.method === 'cash' && payment.change > 0 && (
-            <div className="change-display">
-              <div className="change-label">Change to return:</div>
-              <div className="change-amount">₹{payment.change.toFixed(2)}</div>
+          {/* Payment Method Selection */}
+          <div className="payment-method-selection">
+            <h4>Select Payment Method</h4>
+            <div className="payment-methods-grid">
+              {paymentMethods.map((method) => {
+                const IconComponent = method.icon;
+                return (
+                  <button
+                    key={method.id}
+                    className={`payment-method-btn ${paymentMethod === method.id ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod(method.id)}
+                    style={{ '--method-color': method.color }}
+                  >
+                    <IconComponent size={24} />
+                    <span>{method.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="split-payment-section">
-          <h4>Split Payment</h4>
-          <div className="split-amounts">
-            {Object.entries(splitAmounts).map(([method, amount]) => {
-              const methodInfo = paymentMethods.find(m => m.id === method);
-              const IconComponent = methodInfo.icon;
-              
-              return (
-                <div key={method} className="split-amount-row">
-                  <div className="split-method">
-                    <IconComponent size={16} />
-                    <span>{methodInfo.label}</span>
-                  </div>
+          </div>
+
+          {/* Amount Input for Cash */}
+          {paymentMethod === 'Cash' && (
+            <div className="cash-payment-section">
+              <h4>Cash Payment</h4>
+              <div className="amount-input-section">
+                <div className="form-group">
+                  <label>Amount Received</label>
                   <input
                     type="number"
-                    value={amount || ''}
-                    onChange={(e) => handleSplitAmountChange(method, e.target.value)}
-                    className="split-amount-input"
-                    step="0.01"
-                    min="0"
+                    value={amountReceived}
+                    onChange={(e) => setAmountReceived(e.target.value)}
+                    className="amount-input"
+                    step="1"
+                    min={currentBill.total}
                   />
                 </div>
-              );
-            })}
-          </div>
-          
-          <div className="split-summary">
-            <div className="split-total">
-              <span>Total: ₹{getSplitTotal().toFixed(2)}</span>
-              <span className={`split-status ${Math.abs(getSplitTotal() - totalAmount) < 0.01 ? 'valid' : 'invalid'}`}>
-                {Math.abs(getSplitTotal() - totalAmount) < 0.01 ? '✓' : '✗'}
-              </span>
+                
+                <div className="change-calculation">
+                  <div className="change-row">
+                    <span>Total Amount:</span>
+                    <span>{formatCurrency(currentBill.total)}</span>
+                  </div>
+                  <div className="change-row">
+                    <span>Amount Received:</span>
+                    <span>{formatCurrency(parseFloat(amountReceived) || 0)}</span>
+                  </div>
+                  <div className="change-row change">
+                    <span>Change to Return:</span>
+                    <span>{formatCurrency(calculateChange())}</span>
+                  </div>
+                </div>
+
+                {/* Quick Amount Buttons */}
+                <div className="quick-amounts">
+                  <h5>Quick Amounts</h5>
+                  <div className="quick-amount-buttons">
+                    {[
+                      currentBill.total,
+                      Math.ceil(currentBill.total / 50) * 50,
+                      Math.ceil(currentBill.total / 100) * 100,
+                      Math.ceil(currentBill.total / 500) * 500
+                    ].map((amount, index) => (
+                      <button
+                        key={index}
+                        className="quick-amount-btn"
+                        onClick={() => setAmountReceived(amount.toString())}
+                      >
+                        {formatCurrency(amount)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Action Buttons */}
-      <div className="payment-actions">
-        {isHoldMode ? (
-          <button
-            className="btn btn-primary btn-large"
-            onClick={onHoldBill}
-            disabled={disabled}
-          >
-            <Clock size={18} />
-            Hold Bill
+          {/* Card Payment */}
+          {paymentMethod === 'Card' && (
+            <div className="card-payment-section">
+              <h4>Card Payment</h4>
+              <div className="card-info">
+                <p>Amount to be charged: <strong>{formatCurrency(currentBill.total)}</strong></p>
+                <p>Please swipe/insert the card and follow the instructions on the card reader.</p>
+              </div>
+            </div>
+          )}
+
+          {/* UPI Payment */}
+          {paymentMethod === 'UPI' && (
+            <div className="upi-payment-section">
+              <h4>UPI Payment</h4>
+              <div className="upi-info">
+                <p>Amount to be paid: <strong>{formatCurrency(currentBill.total)}</strong></p>
+                <p>Show QR code to customer or ask for UPI ID for payment.</p>
+                <div className="upi-options">
+                  <button className="btn btn-outline">Generate QR Code</button>
+                  <button className="btn btn-outline">Send Payment Link</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Payment */}
+          {paymentMethod === 'Wallet' && (
+            <div className="wallet-payment-section">
+              <h4>Wallet Payment</h4>
+              <div className="wallet-info">
+                <p>Amount to be paid: <strong>{formatCurrency(currentBill.total)}</strong></p>
+                <p>Select wallet provider and process payment.</p>
+                <div className="wallet-options">
+                  <button className="btn btn-outline">Paytm</button>
+                  <button className="btn btn-outline">PhonePe</button>
+                  <button className="btn btn-outline">Google Pay</button>
+                  <button className="btn btn-outline">Amazon Pay</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Customer Information */}
+          {currentBill.customer && (
+            <div className="customer-payment-info">
+              <h4>Customer Information</h4>
+              <div className="customer-details">
+                <p><strong>Name:</strong> {currentBill.customer.name}</p>
+                <p><strong>Phone:</strong> {currentBill.customer.phone}</p>
+                {currentBill.customer.email && (
+                  <p><strong>Email:</strong> {currentBill.customer.email}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>
+            Cancel
           </button>
-        ) : (
-          <>
-            <button
-              className="btn btn-outline"
-              onClick={onHoldBill}
-              disabled={disabled}
-            >
-              <Clock size={16} />
-              Hold
-            </button>
-            <button
-              className="btn btn-primary btn-large"
-              onClick={onProcessBill}
-              disabled={disabled || !isPaymentValid()}
-            >
-              <Check size={18} />
-              Process Payment
-              <ArrowRight size={16} />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Payment Status */}
-      {!isPaymentValid() && !disabled && (
-        <div className="payment-status error">
-          {splitPayment 
-            ? 'Split amounts must equal the total bill amount'
-            : payment.method === 'cash' 
-              ? 'Cash amount must be greater than or equal to bill total'
-              : 'Payment amount must equal bill total'
-          }
+          <button 
+            className={`btn btn-primary ${processing ? 'loading' : ''}`}
+            onClick={handlePayment}
+            disabled={processing || (paymentMethod === 'Cash' && parseFloat(amountReceived) < currentBill.total)}
+          >
+            <Calculator size={16} />
+            {processing ? 'Processing...' : `Process ${paymentMethod} Payment`}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };

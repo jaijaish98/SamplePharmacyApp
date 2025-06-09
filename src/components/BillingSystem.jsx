@@ -1,310 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Search,
+import { useState } from 'react';
+import { 
+  ShoppingCart, 
+  User, 
+  Package, 
+  CreditCard, 
+  FileText, 
   Scan,
-  Plus,
-  Minus,
-  Trash2,
-  User,
-  Phone,
-  Mail,
-  Upload,
-  Camera,
-  ShoppingCart,
-  CreditCard,
-  Smartphone,
-  Wallet,
-  Printer,
-  Download,
-  Send,
   Save,
-  Clock,
-  Receipt,
+  Printer,
+  RefreshCw,
   Calculator,
-  Edit3,
-  Check,
-  X
+  Clock
 } from 'lucide-react';
+import { BillingProvider } from '../contexts/BillingContext';
+import { StockProvider } from '../contexts/StockContext';
+import { CustomerProvider } from '../contexts/CustomerContext';
 import CustomerPanel from './billing/CustomerPanel';
 import ItemEntry from './billing/ItemEntry';
 import ItemTable from './billing/ItemTable';
 import BillSummary from './billing/BillSummary';
 import PaymentPanel from './billing/PaymentPanel';
 import InvoiceModal from './billing/InvoiceModal';
+import HeldBillsModal from './billing/HeldBillsModal';
 import './BillingSystem.css';
 
 const BillingSystem = () => {
-  const [customer, setCustomer] = useState(null);
-  const [items, setItems] = useState([]);
-  const [billSummary, setBillSummary] = useState({
-    subtotal: 0,
-    discount: 0,
-    gst: 0,
-    total: 0
-  });
-  const [payment, setPayment] = useState({
-    method: 'cash',
-    amount: 0,
-    change: 0
-  });
-  const [showInvoice, setShowInvoice] = useState(false);
-  const [currentBill, setCurrentBill] = useState(null);
-  const [savedBills, setSavedBills] = useState([]);
-  const [isHoldMode, setIsHoldMode] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showHeldBillsModal, setShowHeldBillsModal] = useState(false);
+  const [showPaymentPanel, setShowPaymentPanel] = useState(false);
+  const [generatedInvoice, setGeneratedInvoice] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Sample medicine data
-  const [medicines] = useState([
-    {
-      id: 1,
-      name: 'Paracetamol 500mg',
-      brand: 'Crocin',
-      composition: 'Paracetamol',
-      mrp: 25.50,
-      sellingPrice: 23.00,
-      batchNo: 'PCM001',
-      expiry: '2025-12-31',
-      stock: 150,
-      gstRate: 12
-    },
-    {
-      id: 2,
-      name: 'Amoxicillin 250mg',
-      brand: 'Amoxil',
-      composition: 'Amoxicillin',
-      mrp: 85.00,
-      sellingPrice: 78.00,
-      batchNo: 'AMX002',
-      expiry: '2025-08-15',
-      stock: 75,
-      gstRate: 12
-    },
-    {
-      id: 3,
-      name: 'Cetirizine 10mg',
-      brand: 'Zyrtec',
-      composition: 'Cetirizine HCl',
-      mrp: 45.00,
-      sellingPrice: 42.00,
-      batchNo: 'CTZ003',
-      expiry: '2026-03-20',
-      stock: 200,
-      gstRate: 12
-    },
-    {
-      id: 4,
-      name: 'Omeprazole 20mg',
-      brand: 'Prilosec',
-      composition: 'Omeprazole',
-      mrp: 120.00,
-      sellingPrice: 110.00,
-      batchNo: 'OMP004',
-      expiry: '2025-11-10',
-      stock: 90,
-      gstRate: 12
-    },
-    {
-      id: 5,
-      name: 'Metformin 500mg',
-      brand: 'Glucophage',
-      composition: 'Metformin HCl',
-      mrp: 65.00,
-      sellingPrice: 60.00,
-      batchNo: 'MET005',
-      expiry: '2026-01-25',
-      stock: 120,
-      gstRate: 12
-    }
-  ]);
-
-  // Calculate bill summary whenever items change
-  useEffect(() => {
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0);
-    const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
-    const gst = items.reduce((sum, item) => {
-      const itemTotal = (item.quantity * item.sellingPrice) - (item.discount || 0);
-      return sum + (itemTotal * (item.gstRate / 100));
-    }, 0);
-    const total = subtotal - totalDiscount + gst;
-
-    setBillSummary({
-      subtotal: subtotal.toFixed(2),
-      discount: totalDiscount.toFixed(2),
-      gst: gst.toFixed(2),
-      total: total.toFixed(2)
-    });
-  }, [items]);
-
-  const addItem = (medicine, quantity = 1) => {
-    const existingItemIndex = items.findIndex(item => item.id === medicine.id);
-    
-    if (existingItemIndex >= 0) {
-      const updatedItems = [...items];
-      updatedItems[existingItemIndex].quantity += quantity;
-      setItems(updatedItems);
-    } else {
-      const newItem = {
-        ...medicine,
-        quantity,
-        discount: 0
-      };
-      setItems([...items, newItem]);
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Simulate data refresh
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setRefreshing(false);
   };
 
-  const updateItem = (itemId, field, value) => {
-    const updatedItems = items.map(item => 
-      item.id === itemId ? { ...item, [field]: value } : item
-    );
-    setItems(updatedItems);
-  };
-
-  const removeItem = (itemId) => {
-    setItems(items.filter(item => item.id !== itemId));
-  };
-
-  const clearBill = () => {
-    setItems([]);
-    setCustomer(null);
-    setPayment({ method: 'cash', amount: 0, change: 0 });
-    setIsHoldMode(false);
-  };
-
-  const holdBill = () => {
-    const billToHold = {
-      id: Date.now(),
-      customer,
-      items,
-      billSummary,
-      timestamp: new Date().toISOString(),
-      status: 'held'
-    };
-    setSavedBills([...savedBills, billToHold]);
-    clearBill();
-    setIsHoldMode(false);
-  };
-
-  const processBill = () => {
-    const newBill = {
-      id: Date.now(),
-      invoiceNo: `INV-${Date.now()}`,
-      customer,
-      items,
-      billSummary,
-      payment,
-      timestamp: new Date().toISOString(),
-      status: 'completed'
-    };
-    setCurrentBill(newBill);
-    setShowInvoice(true);
-    setSavedBills([...savedBills, newBill]);
+  const handlePaymentComplete = (invoice) => {
+    setGeneratedInvoice(invoice);
+    setShowPaymentPanel(false);
+    setShowInvoiceModal(true);
   };
 
   return (
-    <div className="billing-system">
-      <div className="billing-header">
-        <h1>Billing System</h1>
-        <div className="billing-actions">
-          <button 
-            className="btn btn-secondary"
-            onClick={() => setIsHoldMode(!isHoldMode)}
-          >
-            <Clock size={18} />
-            {isHoldMode ? 'Cancel Hold' : 'Hold Bill'}
-          </button>
-          <button className="btn btn-outline" onClick={clearBill}>
-            <X size={18} />
-            Clear
-          </button>
-        </div>
-      </div>
-
-      <div className="billing-layout">
-        {/* Top Panel - Customer Information */}
-        <div className="billing-top-panel">
-          <CustomerPanel 
-            customer={customer}
-            setCustomer={setCustomer}
-          />
-        </div>
-
-        {/* Middle Section - Item Entry and Table */}
-        <div className="billing-middle-section">
-          <div className="item-entry-section">
-            <ItemEntry 
-              medicines={medicines}
-              onAddItem={addItem}
-            />
-          </div>
-          
-          <div className="item-table-section">
-            <ItemTable 
-              items={items}
-              onUpdateItem={updateItem}
-              onRemoveItem={removeItem}
-            />
-          </div>
-        </div>
-
-        {/* Bottom Panel - Bill Summary and Payment */}
-        <div className="billing-bottom-panel">
-          <div className="bill-summary-section">
-            <BillSummary 
-              billSummary={billSummary}
-              itemCount={items.length}
-            />
-          </div>
-          
-          <div className="payment-section">
-            <PaymentPanel 
-              billSummary={billSummary}
-              payment={payment}
-              setPayment={setPayment}
-              onProcessBill={processBill}
-              onHoldBill={holdBill}
-              isHoldMode={isHoldMode}
-              disabled={items.length === 0}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Held Bills Sidebar */}
-      {savedBills.filter(bill => bill.status === 'held').length > 0 && (
-        <div className="held-bills-sidebar">
-          <h3>Held Bills ({savedBills.filter(bill => bill.status === 'held').length})</h3>
-          {savedBills.filter(bill => bill.status === 'held').map(bill => (
-            <div key={bill.id} className="held-bill-item">
-              <div className="held-bill-info">
-                <p>{bill.customer?.name || 'Walk-in Customer'}</p>
-                <p>₹{bill.billSummary.total}</p>
-                <p>{new Date(bill.timestamp).toLocaleTimeString()}</p>
+    <StockProvider>
+      <CustomerProvider>
+        <BillingProvider>
+          <div className="billing-system">
+            {/* Header Section */}
+            <div className="billing-header">
+              <div className="header-content">
+                <h1>Billing System</h1>
+                <p>Complete point-of-sale system with customer management, inventory integration, and invoice generation</p>
               </div>
-              <button 
-                className="btn btn-sm btn-primary"
-                onClick={() => {
-                  setCustomer(bill.customer);
-                  setItems(bill.items);
-                  setSavedBills(savedBills.filter(b => b.id !== bill.id));
-                }}
-              >
-                Resume
-              </button>
+              <div className="header-actions">
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => setShowHeldBillsModal(true)}
+                >
+                  <Clock size={20} />
+                  Held Bills
+                </button>
+                <button 
+                  className={`btn btn-secondary ${refreshing ? 'loading' : ''}`}
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                >
+                  <RefreshCw size={20} className={refreshing ? 'spinning' : ''} />
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Invoice Modal */}
-      {showInvoice && currentBill && (
-        <InvoiceModal 
-          bill={currentBill}
-          onClose={() => {
-            setShowInvoice(false);
-            clearBill();
-          }}
-        />
-      )}
-    </div>
+            {/* Quick Stats */}
+            <div className="billing-stats">
+              <div className="stat-card primary">
+                <div className="stat-icon">
+                  <ShoppingCart size={24} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">₹12,450</div>
+                  <div className="stat-label">Today's Sales</div>
+                  <div className="stat-change up">+18% from yesterday</div>
+                </div>
+              </div>
+              
+              <div className="stat-card success">
+                <div className="stat-icon">
+                  <FileText size={24} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">47</div>
+                  <div className="stat-label">Invoices Today</div>
+                  <div className="stat-change up">+5 from yesterday</div>
+                </div>
+              </div>
+              
+              <div className="stat-card info">
+                <div className="stat-icon">
+                  <Calculator size={24} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">₹265</div>
+                  <div className="stat-label">Avg. Order Value</div>
+                  <div className="stat-change up">+12% this week</div>
+                </div>
+              </div>
+              
+              <div className="stat-card warning">
+                <div className="stat-icon">
+                  <Clock size={24} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">3</div>
+                  <div className="stat-label">Held Bills</div>
+                  <div className="stat-change">Awaiting completion</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Billing Interface */}
+            <div className="billing-interface">
+              {/* Left Panel - Customer & Prescription */}
+              <div className="billing-left-panel">
+                <div className="panel-section">
+                  <div className="section-header">
+                    <User size={20} />
+                    <h3>Customer Information</h3>
+                  </div>
+                  <CustomerPanel />
+                </div>
+              </div>
+
+              {/* Center Panel - Item Entry & Table */}
+              <div className="billing-center-panel">
+                <div className="panel-section">
+                  <div className="section-header">
+                    <Package size={20} />
+                    <h3>Medicine/Item Entry</h3>
+                    <button className="btn btn-outline btn-small">
+                      <Scan size={16} />
+                      Scan Barcode
+                    </button>
+                  </div>
+                  <ItemEntry />
+                </div>
+
+                <div className="panel-section">
+                  <div className="section-header">
+                    <ShoppingCart size={20} />
+                    <h3>Bill Items</h3>
+                  </div>
+                  <ItemTable />
+                </div>
+              </div>
+
+              {/* Right Panel - Bill Summary & Payment */}
+              <div className="billing-right-panel">
+                <div className="panel-section">
+                  <div className="section-header">
+                    <Calculator size={20} />
+                    <h3>Bill Summary</h3>
+                  </div>
+                  <BillSummary />
+                </div>
+
+                <div className="panel-section">
+                  <div className="section-header">
+                    <CreditCard size={20} />
+                    <h3>Payment</h3>
+                  </div>
+                  <div className="payment-actions">
+                    <button 
+                      className="btn btn-outline"
+                      onClick={() => {/* Hold bill logic */}}
+                    >
+                      <Save size={16} />
+                      Hold Bill
+                    </button>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => setShowPaymentPanel(true)}
+                    >
+                      <CreditCard size={16} />
+                      Process Payment
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Bar */}
+            <div className="quick-actions-bar">
+              <div className="action-group">
+                <h4>Quick Actions</h4>
+                <div className="action-buttons">
+                  <button className="btn btn-outline btn-small">
+                    <FileText size={16} />
+                    New Bill
+                  </button>
+                  <button className="btn btn-outline btn-small">
+                    <Scan size={16} />
+                    Scan Item
+                  </button>
+                  <button className="btn btn-outline btn-small">
+                    <User size={16} />
+                    Add Customer
+                  </button>
+                  <button className="btn btn-outline btn-small">
+                    <Printer size={16} />
+                    Reprint Last
+                  </button>
+                </div>
+              </div>
+              
+              <div className="action-group">
+                <h4>Recent Activity</h4>
+                <div className="recent-activity">
+                  <div className="activity-item">
+                    <span className="activity-time">2 min ago</span>
+                    <span className="activity-text">Invoice INV000047 - ₹285</span>
+                  </div>
+                  <div className="activity-item">
+                    <span className="activity-time">5 min ago</span>
+                    <span className="activity-text">Customer added - John Doe</span>
+                  </div>
+                  <div className="activity-item">
+                    <span className="activity-time">8 min ago</span>
+                    <span className="activity-text">Bill held - Hold 3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modals */}
+            {showPaymentPanel && (
+              <PaymentPanel 
+                onClose={() => setShowPaymentPanel(false)}
+                onPaymentComplete={handlePaymentComplete}
+              />
+            )}
+
+            {showInvoiceModal && generatedInvoice && (
+              <InvoiceModal 
+                invoice={generatedInvoice}
+                onClose={() => {
+                  setShowInvoiceModal(false);
+                  setGeneratedInvoice(null);
+                }}
+              />
+            )}
+
+            {showHeldBillsModal && (
+              <HeldBillsModal 
+                onClose={() => setShowHeldBillsModal(false)}
+              />
+            )}
+          </div>
+        </BillingProvider>
+      </CustomerProvider>
+    </StockProvider>
   );
 };
 

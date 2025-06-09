@@ -1,535 +1,339 @@
-import { useState } from 'react'
-import {
-  ArrowUpDown,
-  X,
-  Save,
-  Search,
-  Package,
-  MapPin,
-  Clock,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react'
-import './StockTransfer.css'
+import { useState } from 'react';
+import { ArrowUpDown, Package, MapPin, Send, History } from 'lucide-react';
+import { format } from 'date-fns';
+import { useStock } from '../../contexts/StockContext';
 
-const StockTransfer = ({ onClose, onSave, isModal = false }) => {
-  const [formData, setFormData] = useState({
-    medicineId: '',
-    medicineName: '',
-    fromBranch: 'main',
+const StockTransfer = () => {
+  const { stockItems, branches, loading } = useStock();
+  const [transferData, setTransferData] = useState({
+    fromBranch: 1, // Main branch
     toBranch: '',
-    quantity: '',
-    reason: '',
-    notes: '',
-    urgency: 'normal'
-  })
+    items: []
+  });
+  const [selectedItem, setSelectedItem] = useState('');
+  const [transferQuantity, setTransferQuantity] = useState('');
+  const [transferring, setTransferring] = useState(false);
 
-  const [errors, setErrors] = useState({})
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showMedicineSearch, setShowMedicineSearch] = useState(false)
-
-  // Sample data
-  const branches = [
-    { id: 'main', name: 'Main Branch', address: '123 Main Street, Mumbai' },
-    { id: 'branch2', name: 'Branch 2', address: '456 Park Avenue, Mumbai' },
-    { id: 'branch3', name: 'Branch 3', address: '789 Market Road, Mumbai' }
-  ]
-
-  const medicines = [
-    { id: 1, name: 'Paracetamol 500mg', brand: 'Crocin', currentStock: 150 },
-    { id: 2, name: 'Amoxicillin 250mg', brand: 'Amoxil', currentStock: 25 },
-    { id: 3, name: 'Vitamin D3 1000IU', brand: 'HealthVit', currentStock: 200 }
-  ]
-
+  // Mock transfer history
   const transferHistory = [
     {
-      id: 1,
-      medicine: 'Paracetamol 500mg',
+      id: 'TRF001',
+      date: new Date(),
       fromBranch: 'Main Branch',
-      toBranch: 'Branch 2',
-      quantity: 50,
-      date: '2024-03-14',
-      status: 'completed',
-      transferredBy: 'Admin User'
+      toBranch: 'Branch 1',
+      items: [
+        { name: 'Paracetamol 500mg', quantity: 50 },
+        { name: 'Cough Syrup 100ml', quantity: 20 }
+      ],
+      status: 'Completed'
     },
     {
-      id: 2,
-      medicine: 'Vitamin D3 1000IU',
+      id: 'TRF002',
+      date: new Date(Date.now() - 86400000),
       fromBranch: 'Branch 2',
       toBranch: 'Main Branch',
-      quantity: 30,
-      date: '2024-03-13',
-      status: 'in_transit',
-      transferredBy: 'Branch Manager'
+      items: [
+        { name: 'Insulin Pen', quantity: 10 }
+      ],
+      status: 'In Transit'
     }
-  ]
+  ];
 
-  const filteredMedicines = medicines.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicine.brand.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const handleAddItem = () => {
+    if (!selectedItem || !transferQuantity) {
+      alert('Please select an item and enter quantity');
+      return;
+    }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    const item = stockItems.find(i => i.id === parseInt(selectedItem));
+    if (!item) return;
+
+    if (parseInt(transferQuantity) > item.currentStock) {
+      alert('Transfer quantity cannot exceed current stock');
+      return;
+    }
+
+    const existingItemIndex = transferData.items.findIndex(i => i.id === item.id);
     
-    if (errors[name]) {
-      setErrors(prev => ({
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      const updatedItems = [...transferData.items];
+      updatedItems[existingItemIndex].quantity = parseInt(transferQuantity);
+      setTransferData(prev => ({ ...prev, items: updatedItems }));
+    } else {
+      // Add new item
+      setTransferData(prev => ({
         ...prev,
-        [name]: ''
-      }))
+        items: [...prev.items, {
+          id: item.id,
+          name: item.name,
+          currentStock: item.currentStock,
+          quantity: parseInt(transferQuantity),
+          costPrice: item.costPrice
+        }]
+      }));
     }
-  }
 
-  const handleMedicineSelect = (medicine) => {
-    setFormData(prev => ({
+    setSelectedItem('');
+    setTransferQuantity('');
+  };
+
+  const handleRemoveItem = (itemId) => {
+    setTransferData(prev => ({
       ...prev,
-      medicineId: medicine.id,
-      medicineName: medicine.name
-    }))
-    setShowMedicineSearch(false)
-    setSearchTerm('')
-  }
+      items: prev.items.filter(item => item.id !== itemId)
+    }));
+  };
 
-  const validateForm = () => {
-    const newErrors = {}
-    
-    if (!formData.medicineId) newErrors.medicineId = 'Please select a medicine'
-    if (!formData.toBranch) newErrors.toBranch = 'Please select destination branch'
-    if (!formData.quantity || formData.quantity <= 0) {
-      newErrors.quantity = 'Please enter a valid quantity'
+  const handleSubmitTransfer = async () => {
+    if (!transferData.toBranch || transferData.items.length === 0) {
+      alert('Please select destination branch and add items');
+      return;
     }
-    if (!formData.reason) newErrors.reason = 'Please enter a reason for transfer'
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setTransferring(true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (validateForm()) {
-      console.log('Stock transfer:', formData)
-      onSave && onSave(formData)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      alert('Stock transfer initiated successfully!');
+      setTransferData({
+        fromBranch: 1,
+        toBranch: '',
+        items: []
+      });
+    } catch (error) {
+      alert('Failed to initiate transfer. Please try again.');
+    } finally {
+      setTransferring(false);
     }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getTotalTransferValue = () => {
+    return transferData.items.reduce((sum, item) => sum + (item.quantity * item.costPrice), 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="stock-container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading stock transfer...</p>
+        </div>
+      </div>
+    );
   }
 
-  const getStatusInfo = (status) => {
-    const statusMap = {
-      completed: { label: 'Completed', class: 'status-completed', icon: CheckCircle, color: 'var(--secondary-color)' },
-      in_transit: { label: 'In Transit', class: 'status-transit', icon: Clock, color: 'var(--accent-color)' },
-      pending: { label: 'Pending', class: 'status-pending', icon: AlertCircle, color: 'var(--primary-color)' }
-    }
-    return statusMap[status] || statusMap.pending
-  }
+  return (
+    <div className="stock-container">
+      <div className="stock-section">
+        <h3>Stock Transfer Between Branches</h3>
+        <p>Transfer stock items between different pharmacy branches</p>
+      </div>
 
-  const content = (
-    <div className="stock-transfer" style={{ padding: isModal ? 0 : '2rem' }}>
-      {!isModal && (
-        <div className="transfer-header" style={{ marginBottom: '2rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Stock Transfer
-          </h2>
-          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
-            Transfer stock between pharmacy branches
-          </p>
+      {/* Branch Selection */}
+      <div className="stock-section">
+        <h4>Select Branches</h4>
+        <div className="branch-selection">
+          <div className="branch-selector">
+            <div className="branch-label">From Branch</div>
+            <select
+              value={transferData.fromBranch}
+              onChange={(e) => setTransferData(prev => ({ ...prev, fromBranch: parseInt(e.target.value) }))}
+              className="branch-select"
+            >
+              {branches.map(branch => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} - {branch.location}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="transfer-arrow">
+            <ArrowUpDown size={24} />
+          </div>
+
+          <div className="branch-selector">
+            <div className="branch-label">To Branch</div>
+            <select
+              value={transferData.toBranch}
+              onChange={(e) => setTransferData(prev => ({ ...prev, toBranch: parseInt(e.target.value) }))}
+              className="branch-select"
+            >
+              <option value="">Select destination branch</option>
+              {branches.filter(branch => branch.id !== transferData.fromBranch).map(branch => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} - {branch.location}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Item Selection */}
+      <div className="stock-section">
+        <h4>Add Items to Transfer</h4>
+        <div className="item-addition">
+          <div className="add-item-form">
+            <select
+              value={selectedItem}
+              onChange={(e) => setSelectedItem(e.target.value)}
+              className="item-select"
+            >
+              <option value="">Select item to transfer</option>
+              {stockItems.filter(item => item.currentStock > 0).map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.name} (Stock: {item.currentStock})
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              value={transferQuantity}
+              onChange={(e) => setTransferQuantity(e.target.value)}
+              placeholder="Quantity"
+              className="quantity-input"
+              min="1"
+            />
+
+            <button 
+              className="btn btn-primary"
+              onClick={handleAddItem}
+            >
+              Add Item
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Transfer Items List */}
+      {transferData.items.length > 0 && (
+        <div className="stock-section">
+          <h4>Items to Transfer</h4>
+          <div className="transfer-items">
+            {transferData.items.map((item) => (
+              <div key={item.id} className="transfer-item">
+                <div className="item-info">
+                  <div className="item-name">{item.name}</div>
+                  <div className="item-details">
+                    Available: {item.currentStock} | Transferring: {item.quantity}
+                  </div>
+                </div>
+                <div className="item-value">
+                  {formatCurrency(item.quantity * item.costPrice)}
+                </div>
+                <button 
+                  className="btn btn-outline btn-small"
+                  onClick={() => handleRemoveItem(item.id)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="transfer-summary">
+            <div className="summary-item">
+              <span>Total Items:</span>
+              <span>{transferData.items.length}</span>
+            </div>
+            <div className="summary-item">
+              <span>Total Quantity:</span>
+              <span>{transferData.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+            </div>
+            <div className="summary-item">
+              <span>Total Value:</span>
+              <span>{formatCurrency(getTotalTransferValue())}</span>
+            </div>
+          </div>
+
+          <div className="transfer-actions">
+            <button 
+              className={`btn btn-primary ${transferring ? 'loading' : ''}`}
+              onClick={handleSubmitTransfer}
+              disabled={transferring}
+            >
+              <Send size={16} />
+              {transferring ? 'Initiating Transfer...' : 'Initiate Transfer'}
+            </button>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: isModal ? '1fr' : '1fr 1fr', gap: '2rem' }}>
-        {/* Transfer Form */}
-        <div style={{
-          background: 'var(--bg-primary)',
-          borderRadius: 'var(--border-radius)',
-          border: '1px solid var(--border-color)',
-          padding: '1.5rem'
-        }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.125rem', fontWeight: 600 }}>
-            New Transfer
-          </h3>
-
-          <form onSubmit={handleSubmit}>
-            {/* Medicine Selection */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                Select Medicine *
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div 
-                  onClick={() => setShowMedicineSearch(true)}
-                  style={{
-                    padding: '0.75rem',
-                    border: `1px solid ${errors.medicineId ? '#ef4444' : 'var(--border-color)'}`,
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span>{formData.medicineName || 'Click to select medicine...'}</span>
-                  <Search size={16} />
+      {/* Transfer History */}
+      <div className="stock-section">
+        <h4>Recent Transfer History</h4>
+        <div className="transfer-history">
+          {transferHistory.map((transfer) => (
+            <div key={transfer.id} className="transfer-history-item">
+              <div className="transfer-header">
+                <div className="transfer-id">{transfer.id}</div>
+                <div className={`transfer-status ${transfer.status.toLowerCase().replace(' ', '-')}`}>
+                  {transfer.status}
                 </div>
-                {errors.medicineId && (
-                  <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem', display: 'block' }}>
-                    {errors.medicineId}
-                  </span>
-                )}
-
-                {showMedicineSearch && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--border-radius)',
-                    boxShadow: 'var(--shadow-lg)',
-                    zIndex: 10,
-                    marginTop: '0.25rem'
-                  }}>
-                    <input
-                      type="text"
-                      placeholder="Search medicines..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: 'none',
-                        borderBottom: '1px solid var(--border-color)',
-                        background: 'transparent',
-                        outline: 'none'
-                      }}
-                      autoFocus
-                    />
-                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                      {filteredMedicines.map((medicine) => (
-                        <div
-                          key={medicine.id}
-                          onClick={() => handleMedicineSelect(medicine)}
-                          style={{
-                            padding: '0.75rem',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid var(--border-color)',
-                            transition: 'var(--transition)'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = 'var(--bg-secondary)'}
-                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                          <div style={{ fontWeight: 500 }}>{medicine.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            {medicine.brand} • Stock: {medicine.currentStock}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            </div>
 
-            {/* Branch Selection */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                  From Branch
-                </label>
-                <select
-                  name="fromBranch"
-                  value={formData.fromBranch}
-                  onChange={handleInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                >
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+              <div className="transfer-details">
+                <div className="transfer-route">
+                  <MapPin size={14} />
+                  <span>{transfer.fromBranch} → {transfer.toBranch}</span>
+                </div>
+                <div className="transfer-date">
+                  {format(new Date(transfer.date), 'dd/MM/yyyy HH:mm')}
+                </div>
+              </div>
+
+              <div className="transfer-items-summary">
+                <div className="items-count">
+                  {transfer.items.length} item(s):
+                </div>
+                <div className="items-list">
+                  {transfer.items.map((item, index) => (
+                    <span key={index}>
+                      {item.name} ({item.quantity})
+                      {index < transfer.items.length - 1 && ', '}
+                    </span>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                  To Branch *
-                </label>
-                <select
-                  name="toBranch"
-                  value={formData.toBranch}
-                  onChange={handleInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${errors.toBranch ? '#ef4444' : 'var(--border-color)'}`,
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                >
-                  <option value="">Select destination</option>
-                  {branches.filter(b => b.id !== formData.fromBranch).map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                  ))}
-                </select>
-                {errors.toBranch && (
-                  <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem', display: 'block' }}>
-                    {errors.toBranch}
-                  </span>
-                )}
+                </div>
               </div>
             </div>
-
-            {/* Quantity and Urgency */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                  Quantity *
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `1px solid ${errors.quantity ? '#ef4444' : 'var(--border-color)'}`,
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                  placeholder="Enter quantity"
-                  min="1"
-                />
-                {errors.quantity && (
-                  <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem', display: 'block' }}>
-                    {errors.quantity}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                  Urgency
-                </label>
-                <select
-                  name="urgency"
-                  value={formData.urgency}
-                  onChange={handleInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Reason and Notes */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                Reason *
-              </label>
-              <input
-                type="text"
-                name="reason"
-                value={formData.reason}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: `1px solid ${errors.reason ? '#ef4444' : 'var(--border-color)'}`,
-                  borderRadius: 'var(--border-radius)',
-                  background: 'var(--bg-secondary)'
-                }}
-                placeholder="e.g., Branch stock shortage"
-              />
-              {errors.reason && (
-                <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem', display: 'block' }}>
-                  {errors.reason}
-                </span>
-              )}
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                Additional Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--border-radius)',
-                  background: 'var(--bg-secondary)',
-                  resize: 'vertical',
-                  minHeight: '80px'
-                }}
-                placeholder="Any additional notes..."
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              {isModal && (
-                <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>
-                  Cancel
-                </button>
-              )}
-              <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                <Save size={18} />
-                Initiate Transfer
-              </button>
-            </div>
-          </form>
+          ))}
         </div>
+      </div>
 
-        {/* Transfer History */}
-        {!isModal && (
-          <div style={{
-            background: 'var(--bg-primary)',
-            borderRadius: 'var(--border-radius)',
-            border: '1px solid var(--border-color)',
-            padding: '1.5rem'
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.125rem', fontWeight: 600 }}>
-              Recent Transfers
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {transferHistory.map((transfer) => {
-                const statusInfo = getStatusInfo(transfer.status)
-                const StatusIcon = statusInfo.icon
-                
-                return (
-                  <div
-                    key={transfer.id}
-                    style={{
-                      padding: '1rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: 'var(--border-radius)',
-                      background: 'var(--bg-secondary)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                      <div>
-                        <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', fontWeight: 600 }}>
-                          {transfer.medicine}
-                        </h4>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          Quantity: {transfer.quantity}
-                        </p>
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '1rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        background: `${statusInfo.color}20`,
-                        color: statusInfo.color
-                      }}>
-                        <StatusIcon size={12} />
-                        {statusInfo.label}
-                      </div>
-                    </div>
-                    
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                        <ArrowUpDown size={12} />
-                        {transfer.fromBranch} → {transfer.toBranch}
-                      </div>
-                      <div>{transfer.date} • By {transfer.transferredBy}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+      {/* Transfer Guidelines */}
+      <div className="stock-section">
+        <h4>Transfer Guidelines</h4>
+        <div className="guidelines">
+          <div className="guideline-item">
+            <Package size={16} />
+            <span>Ensure receiving branch has adequate storage space</span>
           </div>
-        )}
+          <div className="guideline-item">
+            <ArrowUpDown size={16} />
+            <span>Transfers are tracked and require confirmation at destination</span>
+          </div>
+          <div className="guideline-item">
+            <History size={16} />
+            <span>All transfers maintain complete audit trail</span>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
+};
 
-  if (isModal) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem'
-      }}>
-        <div style={{
-          background: 'var(--bg-primary)',
-          borderRadius: 'var(--border-radius)',
-          boxShadow: 'var(--shadow-lg)',
-          width: '100%',
-          maxWidth: '600px',
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '1.5rem 2rem',
-            borderBottom: '1px solid var(--border-color)',
-            background: 'var(--bg-secondary)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <ArrowUpDown size={24} style={{ color: 'var(--primary-color)' }} />
-              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Stock Transfer</h2>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                padding: '0.5rem',
-                borderRadius: '0.375rem',
-                transition: 'var(--transition)'
-              }}
-            >
-              <X size={24} />
-            </button>
-          </div>
-          <div style={{ flex: 1, overflow: 'auto', padding: '2rem' }}>
-            {content}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return content
-}
-
-export default StockTransfer
+export default StockTransfer;

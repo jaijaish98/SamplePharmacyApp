@@ -53,7 +53,7 @@ const Header = ({ activeSection }) => {
           <Bell size={20} />
           <span className="notification-badge">3</span>
         </button>
-        
+
         <div className="user-menu">
           <button className="user-btn">
             <User size={20} />

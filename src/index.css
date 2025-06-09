@@ -6,23 +6,52 @@
 @import '@fontsource/playfair-display/400.css';
 @import '@fontsource/playfair-display/700.css';
 
+/* Light Theme (Default) */
 :root {
   --primary-color: #2563eb;
   --primary-dark: #1d4ed8;
+  --primary-light: #3b82f6;
   --secondary-color: #10b981;
+  --secondary-dark: #059669;
   --accent-color: #f59e0b;
+  --accent-dark: #d97706;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
   --text-light: #9ca3af;
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
-  --bg-sidebar: #1f2937;
+  --bg-tertiary: #f3f4f6;
+  --bg-sidebar: #2563eb;
   --border-color: #e5e7eb;
+  --border-light: #f3f4f6;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --border-radius: 0.5rem;
   --transition: all 0.2s ease-in-out;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --primary-color: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-light: #60a5fa;
+  --secondary-color: #34d399;
+  --secondary-dark: #10b981;
+  --accent-color: #fbbf24;
+  --accent-dark: #f59e0b;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-light: #9ca3af;
+  --bg-primary: #1f2937;
+  --bg-secondary: #111827;
+  --bg-tertiary: #0f172a;
+  --bg-sidebar: #0f172a;
+  --border-color: #374151;
+  --border-light: #4b5563;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 
 * {
@@ -39,6 +68,7 @@ body {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -70,8 +100,46 @@ body {
 .text-light { color: var(--text-light); }
 .bg-primary { background-color: var(--bg-primary); }
 .bg-secondary { background-color: var(--bg-secondary); }
+.bg-tertiary { background-color: var(--bg-tertiary); }
 .shadow-sm { box-shadow: var(--shadow-sm); }
 .shadow-md { box-shadow: var(--shadow-md); }
 .shadow-lg { box-shadow: var(--shadow-lg); }
 .rounded { border-radius: var(--border-radius); }
 .transition { transition: var(--transition); }
+
+/* Theme Transition Classes */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Dark Theme Specific Styles */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] img {
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .loading-spinner {
+  border-color: var(--border-color);
+  border-top-color: var(--primary-color);
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, select, textarea, .card, .panel, .modal {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Enhanced scrollbar for dark theme */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}

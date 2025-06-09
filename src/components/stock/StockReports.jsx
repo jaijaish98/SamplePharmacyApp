@@ -1,439 +1,328 @@
-import { useState } from 'react'
-import {
-  BarChart3,
-  Download,
-  Calendar,
-  Package,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Activity,
-  FileText
-} from 'lucide-react'
-import './StockReports.css'
+import { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { FileText, Download, Calendar, TrendingUp, Package, AlertTriangle } from 'lucide-react';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { useStock } from '../../contexts/StockContext';
 
 const StockReports = () => {
-  const [reportType, setReportType] = useState('daily')
-  const [dateRange, setDateRange] = useState('today')
+  const { stockItems, getStockAnalytics, loading } = useStock();
+  const [reportType, setReportType] = useState('summary');
+  const [dateRange, setDateRange] = useState({
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd')
+  });
 
-  // Sample report data
-  const reportData = {
-    daily: {
-      openingStock: {
-        totalItems: 1247,
-        totalValue: 1245680.50,
-        categories: [
-          { name: 'Analgesics', items: 45, value: 125000 },
-          { name: 'Antibiotics', items: 32, value: 200000 },
-          { name: 'Vitamins', items: 28, value: 85000 }
-        ]
-      },
-      closingStock: {
-        totalItems: 1235,
-        totalValue: 1238450.75,
-        categories: [
-          { name: 'Analgesics', items: 43, value: 122500 },
-          { name: 'Antibiotics', items: 31, value: 195000 },
-          { name: 'Vitamins', items: 28, value: 85000 }
-        ]
-      },
-      movements: {
-        additions: 25,
-        reductions: 37,
-        transfers: 8,
-        adjustments: 3
-      }
-    },
-    itemWise: [
-      {
-        name: 'Paracetamol 500mg',
-        openingStock: 50,
-        additions: 100,
-        reductions: 15,
-        closingStock: 135,
-        value: 6750.00,
-        movements: 5
-      },
-      {
-        name: 'Amoxicillin 250mg',
-        openingStock: 30,
-        additions: 0,
-        reductions: 5,
-        closingStock: 25,
-        value: 2125.00,
-        movements: 3
-      },
-      {
-        name: 'Vitamin D3 1000IU',
-        openingStock: 190,
-        additions: 0,
-        reductions: 0,
-        closingStock: 190,
-        value: 11400.00,
-        movements: 1
-      }
-    ],
-    summary: {
-      totalStockValue: 1238450.75,
-      lowStockItems: 23,
-      outOfStockItems: 8,
-      nearExpiryItems: 12,
-      totalMovements: 73,
-      averageDailyMovement: 24.3
-    }
-  }
+  const analytics = getStockAnalytics();
 
-  const formatCurrency = (amount) => `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+  // Mock data for charts
+  const categoryData = [
+    { name: 'Tablets', value: 45, stock: 1250 },
+    { name: 'Capsules', value: 25, stock: 680 },
+    { name: 'Syrups', value: 15, stock: 420 },
+    { name: 'Injections', value: 10, stock: 280 },
+    { name: 'Others', value: 5, stock: 140 }
+  ];
 
-  const renderDailyReport = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Opening vs Closing Stock */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '2rem' 
-      }}>
-        {/* Opening Stock */}
-        <div style={{
-          background: 'var(--bg-primary)',
-          borderRadius: 'var(--border-radius)',
-          border: '1px solid var(--border-color)',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            padding: '1.5rem', 
-            borderBottom: '1px solid var(--border-color)', 
-            background: 'rgba(16, 185, 129, 0.1)' 
-          }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--secondary-color)' }}>
-              Opening Stock
-            </h3>
-          </div>
-          <div style={{ padding: '1.5rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {reportData.daily.openingStock.totalItems}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Items</div>
-            </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--secondary-color)' }}>
-                {formatCurrency(reportData.daily.openingStock.totalValue)}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Value</div>
-            </div>
-            <div>
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', fontWeight: 600 }}>By Category</h4>
-              {reportData.daily.openingStock.categories.map((cat, index) => (
-                <div key={index} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '0.5rem',
-                  fontSize: '0.875rem'
-                }}>
-                  <span>{cat.name}</span>
-                  <span style={{ fontWeight: 500 }}>{cat.items} items</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+  const stockTrendData = [
+    { month: 'Jan', opening: 1200, closing: 1180, purchases: 500, sales: 520 },
+    { month: 'Feb', opening: 1180, closing: 1220, purchases: 600, sales: 560 },
+    { month: 'Mar', opening: 1220, closing: 1200, purchases: 550, sales: 570 },
+    { month: 'Apr', opening: 1200, closing: 1250, purchases: 650, sales: 600 },
+    { month: 'May', opening: 1250, closing: 1280, purchases: 580, sales: 550 }
+  ];
 
-        {/* Closing Stock */}
-        <div style={{
-          background: 'var(--bg-primary)',
-          borderRadius: 'var(--border-radius)',
-          border: '1px solid var(--border-color)',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            padding: '1.5rem', 
-            borderBottom: '1px solid var(--border-color)', 
-            background: 'rgba(37, 99, 235, 0.1)' 
-          }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--primary-color)' }}>
-              Closing Stock
-            </h3>
-          </div>
-          <div style={{ padding: '1.5rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {reportData.daily.closingStock.totalItems}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Items</div>
-            </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--primary-color)' }}>
-                {formatCurrency(reportData.daily.closingStock.totalValue)}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Total Value</div>
-            </div>
-            <div>
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', fontWeight: 600 }}>By Category</h4>
-              {reportData.daily.closingStock.categories.map((cat, index) => (
-                <div key={index} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '0.5rem',
-                  fontSize: '0.875rem'
-                }}>
-                  <span>{cat.name}</span>
-                  <span style={{ fontWeight: 500 }}>{cat.items} items</span>
-                </div>
-              ))}
-            </div>
-          </div>
+  const topMovingItems = stockItems
+    .sort((a, b) => (b.maxStock - b.currentStock) - (a.maxStock - a.currentStock))
+    .slice(0, 10);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const generateReport = (type) => {
+    // In a real app, this would generate and download actual reports
+    alert(`Generating ${type} report...`);
+  };
+
+  const renderSummaryReport = () => (
+    <div className="report-content">
+      <div className="report-header">
+        <h4>Stock Summary Report</h4>
+        <div className="report-date">
+          As of {format(new Date(), 'dd/MM/yyyy HH:mm')}
         </div>
       </div>
 
-      {/* Stock Movements */}
-      <div style={{
-        background: 'var(--bg-primary)',
-        borderRadius: 'var(--border-radius)',
-        border: '1px solid var(--border-color)',
-        overflow: 'hidden'
-      }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>Stock Movements</h3>
+      <div className="summary-metrics">
+        <div className="metric-card">
+          <div className="metric-value">{analytics.totalItems}</div>
+          <div className="metric-label">Total Items</div>
         </div>
-        <div style={{ padding: '1.5rem' }}>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-            gap: '1rem' 
-          }}>
-            {[
-              { label: 'Additions', value: reportData.daily.movements.additions, color: 'var(--secondary-color)', icon: TrendingUp },
-              { label: 'Reductions', value: reportData.daily.movements.reductions, color: '#ef4444', icon: TrendingDown },
-              { label: 'Transfers', value: reportData.daily.movements.transfers, color: 'var(--primary-color)', icon: Activity },
-              { label: 'Adjustments', value: reportData.daily.movements.adjustments, color: 'var(--accent-color)', icon: Package }
-            ].map((movement, index) => {
-              const IconComponent = movement.icon
-              return (
-                <div key={index} style={{ textAlign: 'center' }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '3rem',
-                    height: '3rem',
-                    borderRadius: '50%',
-                    background: `${movement.color}20`,
-                    color: movement.color,
-                    marginBottom: '0.5rem'
-                  }}>
-                    <IconComponent size={20} />
-                  </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: movement.color }}>
-                    {movement.value}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                    {movement.label}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+        <div className="metric-card">
+          <div className="metric-value">{formatCurrency(analytics.totalValue)}</div>
+          <div className="metric-label">Total Stock Value</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{analytics.lowStock}</div>
+          <div className="metric-label">Low Stock Items</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{analytics.outOfStock}</div>
+          <div className="metric-label">Out of Stock</div>
+        </div>
+      </div>
+
+      <div className="charts-section">
+        <div className="chart-container">
+          <h5>Stock Distribution by Category</h5>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value }) => `${name}: ${value}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(${index * 72}, 70%, 50%)`} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-container">
+          <h5>Stock Movement Trend</h5>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={stockTrendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="purchases" fill="#10b981" name="Purchases" />
+              <Bar dataKey="sales" fill="#ef4444" name="Sales" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderItemWiseReport = () => (
-    <div style={{
-      background: 'var(--bg-primary)',
-      borderRadius: 'var(--border-radius)',
-      border: '1px solid var(--border-color)',
-      overflow: 'hidden'
-    }}>
-      <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-        <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>Item-wise Stock Report</h3>
+    <div className="report-content">
+      <div className="report-header">
+        <h4>Item-wise Stock Report</h4>
+        <div className="report-filters">
+          <select className="filter-select">
+            <option>All Categories</option>
+            <option>Tablets</option>
+            <option>Capsules</option>
+            <option>Syrups</option>
+          </select>
+        </div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+
+      <div className="item-report-table">
+        <table className="report-table">
           <thead>
-            <tr style={{ background: 'var(--bg-secondary)' }}>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Medicine</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Opening Stock</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Additions</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Reductions</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Closing Stock</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Value</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Movements</th>
+            <tr>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Reorder Level</th>
+              <th>Stock Value</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {reportData.itemWise.map((item, index) => (
-              <tr key={index} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <td style={{ padding: '1rem', fontWeight: 500 }}>{item.name}</td>
-                <td style={{ padding: '1rem' }}>{item.openingStock}</td>
-                <td style={{ padding: '1rem', color: 'var(--secondary-color)', fontWeight: 600 }}>
-                  +{item.additions}
+            {stockItems.slice(0, 15).map((item) => (
+              <tr key={item.id}>
+                <td>{item.name}</td>
+                <td>{item.category}</td>
+                <td>{item.currentStock}</td>
+                <td>{item.reorderLevel}</td>
+                <td>{formatCurrency(item.currentStock * item.costPrice)}</td>
+                <td>
+                  <span className={`status-badge ${item.isOutOfStock ? 'out-of-stock' : item.isLowStock ? 'low-stock' : 'in-stock'}`}>
+                    {item.isOutOfStock ? 'Out of Stock' : item.isLowStock ? 'Low Stock' : 'In Stock'}
+                  </span>
                 </td>
-                <td style={{ padding: '1rem', color: '#ef4444', fontWeight: 600 }}>
-                  -{item.reductions}
-                </td>
-                <td style={{ padding: '1rem', fontWeight: 600 }}>{item.closingStock}</td>
-                <td style={{ padding: '1rem', color: 'var(--secondary-color)', fontWeight: 600 }}>
-                  {formatCurrency(item.value)}
-                </td>
-                <td style={{ padding: '1rem' }}>{item.movements}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 
-  const renderSummaryReport = () => (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-      gap: '1rem' 
-    }}>
-      {[
-        { label: 'Total Stock Value', value: formatCurrency(reportData.summary.totalStockValue), icon: DollarSign, color: 'var(--secondary-color)' },
-        { label: 'Low Stock Items', value: reportData.summary.lowStockItems, icon: Package, color: 'var(--accent-color)' },
-        { label: 'Out of Stock Items', value: reportData.summary.outOfStockItems, icon: Package, color: '#ef4444' },
-        { label: 'Near Expiry Items', value: reportData.summary.nearExpiryItems, icon: Calendar, color: 'var(--accent-color)' },
-        { label: 'Total Movements', value: reportData.summary.totalMovements, icon: Activity, color: 'var(--primary-color)' },
-        { label: 'Avg Daily Movement', value: reportData.summary.averageDailyMovement.toFixed(1), icon: TrendingUp, color: 'var(--secondary-color)' }
-      ].map((stat, index) => {
-        const IconComponent = stat.icon
-        return (
-          <div key={index} style={{
-            background: 'var(--bg-primary)',
-            padding: '1.5rem',
-            borderRadius: 'var(--border-radius)',
-            border: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{
-              padding: '0.75rem',
-              borderRadius: '0.5rem',
-              background: `${stat.color}20`,
-              color: stat.color
-            }}>
-              <IconComponent size={24} />
+  const renderStockHistoryReport = () => (
+    <div className="report-content">
+      <div className="report-header">
+        <h4>Stock History Report</h4>
+        <div className="date-range">
+          <input
+            type="date"
+            value={dateRange.start}
+            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+            className="date-input"
+          />
+          <span>to</span>
+          <input
+            type="date"
+            value={dateRange.end}
+            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+            className="date-input"
+          />
+        </div>
+      </div>
+
+      <div className="history-summary">
+        <div className="summary-card">
+          <h5>Opening Stock</h5>
+          <div className="summary-value">{formatCurrency(1200000)}</div>
+        </div>
+        <div className="summary-card">
+          <h5>Purchases</h5>
+          <div className="summary-value positive">{formatCurrency(450000)}</div>
+        </div>
+        <div className="summary-card">
+          <h5>Sales</h5>
+          <div className="summary-value negative">{formatCurrency(380000)}</div>
+        </div>
+        <div className="summary-card">
+          <h5>Closing Stock</h5>
+          <div className="summary-value">{formatCurrency(1270000)}</div>
+        </div>
+      </div>
+
+      <div className="top-movers">
+        <h5>Top Moving Items</h5>
+        <div className="movers-list">
+          {topMovingItems.map((item, index) => (
+            <div key={item.id} className="mover-item">
+              <div className="mover-rank">#{index + 1}</div>
+              <div className="mover-info">
+                <div className="mover-name">{item.name}</div>
+                <div className="mover-movement">
+                  Moved: {item.maxStock - item.currentStock} units
+                </div>
+              </div>
+              <div className="mover-value">
+                {formatCurrency((item.maxStock - item.currentStock) * item.costPrice)}
+              </div>
             </div>
-            <div>
-              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {stat.label}
-              </p>
-              <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {stat.value}
-              </p>
-            </div>
-          </div>
-        )
-      })}
+          ))}
+        </div>
+      </div>
     </div>
-  )
+  );
 
-  const renderReportContent = () => {
-    switch (reportType) {
-      case 'daily':
-        return renderDailyReport()
-      case 'itemwise':
-        return renderItemWiseReport()
-      case 'summary':
-        return renderSummaryReport()
-      default:
-        return renderDailyReport()
-    }
+  if (loading) {
+    return (
+      <div className="stock-container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading stock reports...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="stock-reports" style={{ padding: '2rem' }}>
-      <div className="reports-header" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        marginBottom: '2rem',
-        gap: '2rem'
-      }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Stock Reports
-          </h2>
-          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
-            Comprehensive stock analysis and reporting
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            style={{
-              padding: '0.5rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--border-radius)',
-              background: 'var(--bg-secondary)'
-            }}
-          >
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-          </select>
-          <button className="btn btn-secondary">
-            <Download size={18} />
-            Export
-          </button>
+    <div className="stock-container">
+      <div className="stock-section">
+        <div className="section-header">
+          <h3>Stock Reports & Analytics</h3>
+          <div className="report-actions">
+            <button 
+              className="btn btn-primary"
+              onClick={() => generateReport(reportType)}
+            >
+              <Download size={16} />
+              Export Report
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Report Type Tabs */}
-      <div style={{
-        display: 'flex',
-        background: 'var(--bg-primary)',
-        borderRadius: 'var(--border-radius)',
-        padding: '0.5rem',
-        marginBottom: '2rem',
-        border: '1px solid var(--border-color)',
-        gap: '0.25rem'
-      }}>
-        {[
-          { id: 'daily', label: 'Daily Stock', icon: Calendar },
-          { id: 'itemwise', label: 'Item-wise Report', icon: Package },
-          { id: 'summary', label: 'Stock Summary', icon: BarChart3 }
-        ].map((tab) => {
-          const IconComponent = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setReportType(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                border: 'none',
-                background: reportType === tab.id ? 'var(--primary-color)' : 'none',
-                color: reportType === tab.id ? 'white' : 'var(--text-secondary)',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                borderRadius: 'calc(var(--border-radius) - 2px)',
-                transition: 'var(--transition)',
-                flex: 1,
-                justifyContent: 'center'
-              }}
-            >
-              <IconComponent size={18} />
-              {tab.label}
-            </button>
-          )
-        })}
+      {/* Report Type Selection */}
+      <div className="report-tabs">
+        <button 
+          className={`report-tab ${reportType === 'summary' ? 'active' : ''}`}
+          onClick={() => setReportType('summary')}
+        >
+          <FileText size={16} />
+          Stock Summary
+        </button>
+        <button 
+          className={`report-tab ${reportType === 'itemwise' ? 'active' : ''}`}
+          onClick={() => setReportType('itemwise')}
+        >
+          <Package size={16} />
+          Item-wise Report
+        </button>
+        <button 
+          className={`report-tab ${reportType === 'history' ? 'active' : ''}`}
+          onClick={() => setReportType('history')}
+        >
+          <TrendingUp size={16} />
+          Stock History
+        </button>
       </div>
 
       {/* Report Content */}
-      {renderReportContent()}
-    </div>
-  )
-}
+      <div className="stock-section">
+        {reportType === 'summary' && renderSummaryReport()}
+        {reportType === 'itemwise' && renderItemWiseReport()}
+        {reportType === 'history' && renderStockHistoryReport()}
+      </div>
 
-export default StockReports
+      {/* Quick Export Options */}
+      <div className="export-options">
+        <h4>Quick Export Options</h4>
+        <div className="export-buttons">
+          <button 
+            className="btn btn-outline"
+            onClick={() => generateReport('daily-summary')}
+          >
+            <Calendar size={16} />
+            Daily Summary
+          </button>
+          <button 
+            className="btn btn-outline"
+            onClick={() => generateReport('low-stock')}
+          >
+            <AlertTriangle size={16} />
+            Low Stock Report
+          </button>
+          <button 
+            className="btn btn-outline"
+            onClick={() => generateReport('valuation')}
+          >
+            <TrendingUp size={16} />
+            Stock Valuation
+          </button>
+          <button 
+            className="btn btn-outline"
+            onClick={() => generateReport('movement')}
+          >
+            <Package size={16} />
+            Movement Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StockReports;

@@ -1,104 +1,221 @@
-import React from 'react';
-import {
-  Calculator,
-  Package,
-  Percent,
-  Receipt,
-  TrendingUp
-} from 'lucide-react';
-import './BillSummary.css';
+import { useState } from 'react';
+import { Percent, Calculator } from 'lucide-react';
+import { useBilling } from '../../contexts/BillingContext';
 
-const BillSummary = ({ billSummary, itemCount }) => {
-  const { subtotal, discount, gst, total } = billSummary;
+const BillSummary = () => {
+  const { currentBill, applyDiscount, settings } = useBilling();
+  const [discountType, setDiscountType] = useState('amount'); // 'amount' or 'percentage'
+  const [discountValue, setDiscountValue] = useState('');
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const handleDiscountApply = () => {
+    if (!discountValue) return;
+
+    let discountAmount = 0;
+    const value = parseFloat(discountValue);
+
+    if (discountType === 'percentage') {
+      if (value > settings.maxDiscountPercent) {
+        alert(`Maximum discount allowed is ${settings.maxDiscountPercent}%`);
+        return;
+      }
+      discountAmount = (currentBill.subtotal * value) / 100;
+    } else {
+      discountAmount = value;
+    }
+
+    if (discountAmount > currentBill.subtotal) {
+      alert('Discount cannot be more than subtotal');
+      return;
+    }
+
+    applyDiscount(discountAmount);
+    setDiscountValue('');
+  };
+
+  const calculateGSTBreakdown = () => {
+    const discountedAmount = currentBill.subtotal - currentBill.discount;
+    const cgst = Math.round(discountedAmount * settings.cgstRate);
+    const sgst = Math.round(discountedAmount * settings.sgstRate);
+    return { cgst, sgst, total: cgst + sgst };
+  };
+
+  const gstBreakdown = calculateGSTBreakdown();
 
   return (
     <div className="bill-summary">
-      <div className="bill-summary-header">
-        <h3>Bill Summary</h3>
-        <div className="summary-icon">
-          <Calculator size={20} />
+      {/* Discount Section */}
+      {settings.allowDiscount && (
+        <div className="discount-section">
+          <h4>Apply Discount</h4>
+          <div className="discount-controls">
+            <div className="discount-type">
+              <label>
+                <input
+                  type="radio"
+                  value="amount"
+                  checked={discountType === 'amount'}
+                  onChange={(e) => setDiscountType(e.target.value)}
+                />
+                Amount (₹)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="percentage"
+                  checked={discountType === 'percentage'}
+                  onChange={(e) => setDiscountType(e.target.value)}
+                />
+                Percentage (%)
+              </label>
+            </div>
+            
+            <div className="discount-input">
+              <input
+                type="number"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                placeholder={discountType === 'percentage' ? 'Enter %' : 'Enter ₹'}
+                className="discount-value-input"
+                min="0"
+                max={discountType === 'percentage' ? settings.maxDiscountPercent : currentBill.subtotal}
+                step={discountType === 'percentage' ? '0.1' : '1'}
+              />
+              <button 
+                className="btn btn-outline btn-small"
+                onClick={handleDiscountApply}
+                disabled={!discountValue}
+              >
+                <Percent size={14} />
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bill Summary */}
+      <div className="summary-section">
+        <div className="summary-row">
+          <span className="summary-label">Subtotal:</span>
+          <span className="summary-value">{formatCurrency(currentBill.subtotal)}</span>
+        </div>
+
+        {currentBill.discount > 0 && (
+          <div className="summary-row discount">
+            <span className="summary-label">Discount:</span>
+            <span className="summary-value">-{formatCurrency(currentBill.discount)}</span>
+          </div>
+        )}
+
+        <div className="summary-row">
+          <span className="summary-label">Taxable Amount:</span>
+          <span className="summary-value">
+            {formatCurrency(currentBill.subtotal - currentBill.discount)}
+          </span>
+        </div>
+
+        {/* GST Breakdown */}
+        {settings.autoCalculateGST && (
+          <>
+            <div className="summary-row gst">
+              <span className="summary-label">CGST ({(settings.cgstRate * 100).toFixed(1)}%):</span>
+              <span className="summary-value">{formatCurrency(gstBreakdown.cgst)}</span>
+            </div>
+            
+            <div className="summary-row gst">
+              <span className="summary-label">SGST ({(settings.sgstRate * 100).toFixed(1)}%):</span>
+              <span className="summary-value">{formatCurrency(gstBreakdown.sgst)}</span>
+            </div>
+            
+            <div className="summary-row gst-total">
+              <span className="summary-label">Total GST:</span>
+              <span className="summary-value">{formatCurrency(currentBill.gstAmount)}</span>
+            </div>
+          </>
+        )}
+
+        <div className="summary-row total">
+          <span className="summary-label">Total Amount:</span>
+          <span className="summary-value">{formatCurrency(currentBill.total)}</span>
         </div>
       </div>
 
-      <div className="summary-content">
-        {/* Item Count */}
-        <div className="summary-row">
-          <div className="summary-label">
-            <Package size={16} />
-            <span>Total Items</span>
-          </div>
-          <div className="summary-value">
-            {itemCount} items
-          </div>
+      {/* Payment Method Selection */}
+      <div className="payment-method-section">
+        <h4>Payment Method</h4>
+        <div className="payment-methods">
+          <label className="payment-option">
+            <input
+              type="radio"
+              value="Cash"
+              checked={currentBill.paymentMethod === 'Cash'}
+              onChange={(e) => {/* Update payment method */}}
+            />
+            Cash
+          </label>
+          <label className="payment-option">
+            <input
+              type="radio"
+              value="Card"
+              checked={currentBill.paymentMethod === 'Card'}
+              onChange={(e) => {/* Update payment method */}}
+            />
+            Card
+          </label>
+          <label className="payment-option">
+            <input
+              type="radio"
+              value="UPI"
+              checked={currentBill.paymentMethod === 'UPI'}
+              onChange={(e) => {/* Update payment method */}}
+            />
+            UPI
+          </label>
+          <label className="payment-option">
+            <input
+              type="radio"
+              value="Wallet"
+              checked={currentBill.paymentMethod === 'Wallet'}
+              onChange={(e) => {/* Update payment method */}}
+            />
+            Wallet
+          </label>
         </div>
+      </div>
 
-        {/* Subtotal */}
-        <div className="summary-row">
-          <div className="summary-label">
-            <Receipt size={16} />
-            <span>Subtotal</span>
-          </div>
-          <div className="summary-value">
-            ₹{subtotal}
-          </div>
+      {/* Bill Notes */}
+      <div className="notes-section">
+        <h4>Notes</h4>
+        <textarea
+          value={currentBill.notes}
+          onChange={(e) => {/* Update notes */}}
+          placeholder="Add any special instructions or notes..."
+          className="notes-input"
+          rows="3"
+        />
+      </div>
+
+      {/* Quick Calculations */}
+      <div className="quick-calculations">
+        <div className="calc-item">
+          <Calculator size={16} />
+          <span>Items: {currentBill.items.length}</span>
         </div>
-
-        {/* Discount */}
-        <div className="summary-row discount-row">
-          <div className="summary-label">
-            <Percent size={16} />
-            <span>Discount</span>
-          </div>
-          <div className="summary-value discount-value">
-            -₹{discount}
-          </div>
+        <div className="calc-item">
+          <span>Qty: {currentBill.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
         </div>
-
-        {/* GST */}
-        <div className="summary-row">
-          <div className="summary-label">
-            <TrendingUp size={16} />
-            <span>GST</span>
-          </div>
-          <div className="summary-value">
-            +₹{gst}
-          </div>
+        <div className="calc-item">
+          <span>Avg: {formatCurrency(currentBill.items.length > 0 ? currentBill.total / currentBill.items.length : 0)}</span>
         </div>
-
-        {/* Divider */}
-        <div className="summary-divider"></div>
-
-        {/* Total */}
-        <div className="summary-row total-row">
-          <div className="summary-label total-label">
-            <span>Grand Total</span>
-          </div>
-          <div className="summary-value total-value">
-            ₹{total}
-          </div>
-        </div>
-
-        {/* Additional Info */}
-        <div className="additional-info">
-          <div className="info-item">
-            <span className="info-label">Tax Inclusive</span>
-            <span className="info-value">Yes</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Rounding</span>
-            <span className="info-value">₹0.00</span>
-          </div>
-        </div>
-
-        {/* Savings Display */}
-        {parseFloat(discount) > 0 && (
-          <div className="savings-display">
-            <div className="savings-badge">
-              <Percent size={14} />
-              <span>You saved ₹{discount}</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

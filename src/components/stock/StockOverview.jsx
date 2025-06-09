@@ -1,317 +1,326 @@
-import { useState } from 'react'
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Minus,
-  Package,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  ArrowUpDown,
-  Edit,
-  RefreshCw,
-  Calendar
-} from 'lucide-react'
-import './StockOverview.css'
+import { useState } from 'react';
+import { Package, AlertTriangle, TrendingUp, Calendar, Search, Filter } from 'lucide-react';
+import { format } from 'date-fns';
+import { useStock } from '../../contexts/StockContext';
 
-const StockOverview = ({ onStockAdd, onStockReduce, onStockTransfer }) => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterBy, setFilterBy] = useState('all')
-  const [sortBy, setSortBy] = useState('name')
+const StockOverview = () => {
+  const { 
+    getFilteredStockItems, 
+    getStockAnalytics, 
+    getLowStockItems, 
+    getOutOfStockItems, 
+    getNearExpiryItems,
+    loading 
+  } = useStock();
 
-  // Sample stock data with real-time updates
-  const stockData = [
-    {
-      id: 1,
-      name: 'Paracetamol 500mg',
-      brand: 'Crocin',
-      category: 'Analgesic',
-      currentStock: 150,
-      reorderLevel: 50,
-      maxStock: 500,
-      unit: 'tablets',
-      lastUpdated: '2024-03-15 10:30 AM',
-      status: 'in_stock',
-      location: 'A-1-01',
-      batchCount: 3,
-      nearExpiry: 0
-    },
-    {
-      id: 2,
-      name: 'Amoxicillin 250mg',
-      brand: 'Amoxil',
-      category: 'Antibiotic',
-      currentStock: 25,
-      reorderLevel: 30,
-      maxStock: 200,
-      unit: 'capsules',
-      lastUpdated: '2024-03-15 09:15 AM',
-      status: 'low_stock',
-      location: 'B-2-05',
-      batchCount: 2,
-      nearExpiry: 1
-    },
-    {
-      id: 3,
-      name: 'Ibuprofen 400mg',
-      brand: 'Brufen',
-      category: 'Analgesic',
-      currentStock: 0,
-      reorderLevel: 40,
-      maxStock: 300,
-      unit: 'tablets',
-      lastUpdated: '2024-03-14 05:45 PM',
-      status: 'out_of_stock',
-      location: 'C-1-03',
-      batchCount: 0,
-      nearExpiry: 0
-    },
-    {
-      id: 4,
-      name: 'Vitamin D3 1000IU',
-      brand: 'HealthVit',
-      category: 'Vitamin',
-      currentStock: 200,
-      reorderLevel: 50,
-      maxStock: 400,
-      unit: 'tablets',
-      lastUpdated: '2024-03-15 11:20 AM',
-      status: 'in_stock',
-      location: 'D-3-01',
-      batchCount: 2,
-      nearExpiry: 1
-    },
-    {
-      id: 5,
-      name: 'Cough Syrup 100ml',
-      brand: 'Benadryl',
-      category: 'Cough & Cold',
-      currentStock: 15,
-      reorderLevel: 25,
-      maxStock: 100,
-      unit: 'bottles',
-      lastUpdated: '2024-03-15 08:30 AM',
-      status: 'low_stock',
-      location: 'E-1-02',
-      batchCount: 1,
-      nearExpiry: 0
+  const [viewMode, setViewMode] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+
+  const analytics = getStockAnalytics();
+  const allItems = getFilteredStockItems();
+  const lowStockItems = getLowStockItems();
+  const outOfStockItems = getOutOfStockItems();
+  const nearExpiryItems = getNearExpiryItems();
+
+  const getDisplayItems = () => {
+    switch (viewMode) {
+      case 'low_stock':
+        return lowStockItems;
+      case 'out_of_stock':
+        return outOfStockItems;
+      case 'near_expiry':
+        return nearExpiryItems;
+      default:
+        return allItems.slice(0, 20); // Show first 20 items
     }
-  ]
+  };
 
-  const filteredStock = stockData.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    if (filterBy === 'all') return matchesSearch
-    if (filterBy === 'in_stock') return matchesSearch && item.status === 'in_stock'
-    if (filterBy === 'low_stock') return matchesSearch && item.status === 'low_stock'
-    if (filterBy === 'out_of_stock') return matchesSearch && item.status === 'out_of_stock'
-    if (filterBy === 'near_expiry') return matchesSearch && item.nearExpiry > 0
-    
-    return matchesSearch
-  })
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
-  const getStatusInfo = (status) => {
-    const statusMap = {
-      in_stock: { label: 'In Stock', class: 'status-in-stock', icon: CheckCircle },
-      low_stock: { label: 'Low Stock', class: 'status-low-stock', icon: AlertTriangle },
-      out_of_stock: { label: 'Out of Stock', class: 'status-out-stock', icon: XCircle }
+  const getStockStatusBadge = (item) => {
+    if (item.isOutOfStock) {
+      return { class: 'out-of-stock', label: 'Out of Stock', icon: AlertTriangle };
+    } else if (item.isLowStock) {
+      return { class: 'low-stock', label: 'Low Stock', icon: AlertTriangle };
+    } else {
+      return { class: 'in-stock', label: 'In Stock', icon: Package };
     }
-    return statusMap[status] || statusMap.in_stock
-  }
+  };
 
-  const getStockPercentage = (current, max) => {
-    return Math.min((current / max) * 100, 100)
-  }
+  const getExpiryStatusBadge = (item) => {
+    if (item.daysToExpiry < 0) {
+      return { class: 'expired', label: 'Expired', color: '#ef4444' };
+    } else if (item.isNearExpiry) {
+      return { class: 'near-expiry', label: `${item.daysToExpiry} days left`, color: '#f59e0b' };
+    } else {
+      return { class: 'valid', label: `${item.daysToExpiry} days left`, color: '#10b981' };
+    }
+  };
 
-  const getStockBarColor = (current, reorder, max) => {
-    if (current === 0) return '#ef4444'
-    if (current <= reorder) return '#f59e0b'
-    if (current >= max * 0.8) return '#10b981'
-    return '#3b82f6'
+  if (loading) {
+    return (
+      <div className="stock-container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading stock overview...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="stock-overview">
-      {/* Search and Filter Controls */}
-      <div className="overview-controls">
-        <div className="search-container">
-          <Search size={20} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search medicines, brands, or categories..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
+    <div className="stock-container">
+      {/* Analytics Cards */}
+      <div className="stock-analytics">
+        <div className="analytics-grid">
+          <div className="analytics-card">
+            <div className="analytics-icon">
+              <Package size={24} />
+            </div>
+            <div className="analytics-content">
+              <div className="analytics-value">{analytics.totalItems}</div>
+              <div className="analytics-label">Total Items</div>
+              <div className="analytics-detail">Across all categories</div>
+            </div>
+          </div>
+          
+          <div className="analytics-card">
+            <div className="analytics-icon">
+              <TrendingUp size={24} />
+            </div>
+            <div className="analytics-content">
+              <div className="analytics-value">{analytics.inStock}</div>
+              <div className="analytics-label">In Stock</div>
+              <div className="analytics-detail">Above reorder level</div>
+            </div>
+          </div>
+          
+          <div className="analytics-card warning">
+            <div className="analytics-icon">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="analytics-content">
+              <div className="analytics-value">{analytics.lowStock}</div>
+              <div className="analytics-label">Low Stock</div>
+              <div className="analytics-detail">Need reordering</div>
+            </div>
+          </div>
+          
+          <div className="analytics-card danger">
+            <div className="analytics-icon">
+              <Package size={24} />
+            </div>
+            <div className="analytics-content">
+              <div className="analytics-value">{analytics.outOfStock}</div>
+              <div className="analytics-label">Out of Stock</div>
+              <div className="analytics-detail">Immediate attention</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Value Summary */}
+      <div className="stock-section">
+        <h3>Stock Value Summary</h3>
+        <div className="value-summary">
+          <div className="value-card">
+            <div className="value-label">Total Stock Value (Cost)</div>
+            <div className="value-amount">{formatCurrency(analytics.totalValue)}</div>
+          </div>
+          <div className="value-card">
+            <div className="value-label">Total Stock Value (MRP)</div>
+            <div className="value-amount">{formatCurrency(analytics.totalMRP)}</div>
+          </div>
+          <div className="value-card">
+            <div className="value-label">Potential Profit</div>
+            <div className="value-amount profit">{formatCurrency(analytics.totalMRP - analytics.totalValue)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* View Mode Selector */}
+      <div className="stock-section">
+        <div className="section-header">
+          <h3>Stock Items</h3>
+          <div className="view-controls">
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              className="view-select"
+            >
+              <option value="all">All Items</option>
+              <option value="low_stock">Low Stock ({lowStockItems.length})</option>
+              <option value="out_of_stock">Out of Stock ({outOfStockItems.length})</option>
+              <option value="near_expiry">Near Expiry ({nearExpiryItems.length})</option>
+            </select>
+            
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="name">Sort by Name</option>
+              <option value="stock">Sort by Stock</option>
+              <option value="expiry">Sort by Expiry</option>
+              <option value="value">Sort by Value</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Stock Items List */}
+        <div className="stock-items-list">
+          {getDisplayItems().map((item) => {
+            const stockStatus = getStockStatusBadge(item);
+            const expiryStatus = getExpiryStatusBadge(item);
+            const StatusIcon = stockStatus.icon;
+            
+            return (
+              <div 
+                key={item.id} 
+                className={`stock-item-card ${stockStatus.class} ${item.isNearExpiry ? 'near-expiry' : ''}`}
+              >
+                <div className="stock-item-header">
+                  <div className="stock-item-info">
+                    <div className="stock-item-name">{item.name}</div>
+                    <div className="stock-item-details">
+                      <div>Brand: {item.brand} | Category: {item.category}</div>
+                      <div>Salt: {item.salt} | Batch: {item.batchNumber}</div>
+                      <div>Location: {item.location} | Supplier: {item.supplier}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="stock-item-status">
+                    <div className={`stock-status-badge ${stockStatus.class}`}>
+                      <StatusIcon size={14} />
+                      {stockStatus.label}
+                    </div>
+                    <div className={`stock-quantity ${item.isLowStock ? 'low' : ''} ${item.isOutOfStock ? 'out' : ''}`}>
+                      {item.currentStock}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="stock-metrics">
+                  <div className="metric-item">
+                    <span className="metric-label">Reorder Level</span>
+                    <span className="metric-value">{item.reorderLevel}</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="metric-label">Max Stock</span>
+                    <span className="metric-value">{item.maxStock}</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="metric-label">Cost Price</span>
+                    <span className="metric-value">{formatCurrency(item.costPrice)}</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="metric-label">MRP</span>
+                    <span className="metric-value">{formatCurrency(item.mrp)}</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="metric-label">Stock Value</span>
+                    <span className="metric-value">{formatCurrency(item.currentStock * item.costPrice)}</span>
+                  </div>
+                  <div className="metric-item">
+                    <span className="metric-label">Expiry Date</span>
+                    <span className="metric-value" style={{ color: expiryStatus.color }}>
+                      {format(new Date(item.expiryDate), 'dd/MM/yyyy')}
+                    </span>
+                  </div>
+                </div>
+
+                {(item.isLowStock || item.isNearExpiry) && (
+                  <div className="stock-alerts">
+                    {item.isLowStock && (
+                      <div className="alert-badge low-stock">
+                        <AlertTriangle size={14} />
+                        Stock below reorder level - Consider reordering
+                      </div>
+                    )}
+                    {item.isNearExpiry && (
+                      <div className="alert-badge near-expiry">
+                        <Calendar size={14} />
+                        Expires in {item.daysToExpiry} days
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="stock-actions">
+                  <button className="btn btn-outline btn-small">
+                    View Details
+                  </button>
+                  <button className="btn btn-primary btn-small">
+                    Adjust Stock
+                  </button>
+                  {item.isLowStock && (
+                    <button className="btn btn-secondary btn-small">
+                      Reorder
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Show More Button */}
+        {viewMode === 'all' && allItems.length > 20 && (
+          <div className="show-more">
+            <button className="btn btn-outline">
+              Show More Items ({allItems.length - 20} remaining)
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="quick-actions">
+        <div className="action-card">
+          <h4>Quick Actions</h4>
+          <div className="action-buttons">
+            <button className="btn btn-primary">
+              <Package size={16} />
+              Bulk Stock Update
+            </button>
+            <button className="btn btn-secondary">
+              <AlertTriangle size={16} />
+              Generate Reorder List
+            </button>
+            <button className="btn btn-outline">
+              <TrendingUp size={16} />
+              Stock Valuation Report
+            </button>
+          </div>
         </div>
         
-        <div className="filter-controls">
-          <select
-            value={filterBy}
-            onChange={(e) => setFilterBy(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All Items</option>
-            <option value="in_stock">In Stock</option>
-            <option value="low_stock">Low Stock</option>
-            <option value="out_of_stock">Out of Stock</option>
-            <option value="near_expiry">Near Expiry</option>
-          </select>
-          
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="sort-select"
-          >
-            <option value="name">Sort by Name</option>
-            <option value="stock">Sort by Stock Level</option>
-            <option value="category">Sort by Category</option>
-            <option value="updated">Sort by Last Updated</option>
-          </select>
-        </div>
-
-        <button className="btn btn-secondary refresh-btn">
-          <RefreshCw size={18} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Stock Items Grid */}
-      <div className="stock-grid">
-        {filteredStock.map((item) => {
-          const statusInfo = getStatusInfo(item.status)
-          const StatusIcon = statusInfo.icon
-          const stockPercentage = getStockPercentage(item.currentStock, item.maxStock)
-          const stockBarColor = getStockBarColor(item.currentStock, item.reorderLevel, item.maxStock)
-          
-          return (
-            <div key={item.id} className="stock-card">
-              <div className="card-header">
-                <div className="item-info">
-                  <h3 className="item-name">{item.name}</h3>
-                  <p className="item-brand">{item.brand}</p>
-                  <span className="item-category">{item.category}</span>
-                </div>
-                <div className={`status-badge ${statusInfo.class}`}>
-                  <StatusIcon size={14} />
-                  <span>{statusInfo.label}</span>
-                </div>
-              </div>
-
-              <div className="card-body">
-                {/* Stock Level Indicator */}
-                <div className="stock-level">
-                  <div className="stock-info">
-                    <span className="current-stock">{item.currentStock}</span>
-                    <span className="stock-unit">/ {item.maxStock} {item.unit}</span>
-                  </div>
-                  <div className="stock-bar">
-                    <div 
-                      className="stock-fill" 
-                      style={{ 
-                        width: `${stockPercentage}%`,
-                        backgroundColor: stockBarColor
-                      }}
-                    ></div>
-                  </div>
-                  <div className="reorder-info">
-                    <span className="reorder-level">Reorder at: {item.reorderLevel}</span>
-                  </div>
-                </div>
-
-                {/* Additional Info */}
-                <div className="item-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Location:</span>
-                    <span className="detail-value location">{item.location}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Batches:</span>
-                    <span className="detail-value">{item.batchCount}</span>
-                  </div>
-                  {item.nearExpiry > 0 && (
-                    <div className="detail-row warning">
-                      <span className="detail-label">Near Expiry:</span>
-                      <span className="detail-value">{item.nearExpiry} batch(es)</span>
-                    </div>
-                  )}
-                  <div className="detail-row">
-                    <span className="detail-label">Last Updated:</span>
-                    <span className="detail-value">{item.lastUpdated}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="card-footer">
-                <div className="action-buttons">
-                  <button 
-                    className="action-btn add-btn"
-                    onClick={() => onStockAdd(item)}
-                    title="Add Stock"
-                  >
-                    <Plus size={16} />
-                  </button>
-                  <button 
-                    className="action-btn reduce-btn"
-                    onClick={() => onStockReduce(item)}
-                    title="Reduce Stock"
-                    disabled={item.currentStock === 0}
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <button 
-                    className="action-btn transfer-btn"
-                    onClick={() => onStockTransfer(item)}
-                    title="Transfer Stock"
-                    disabled={item.currentStock === 0}
-                  >
-                    <ArrowUpDown size={16} />
-                  </button>
-                  <button 
-                    className="action-btn edit-btn"
-                    title="Edit Item"
-                  >
-                    <Edit size={16} />
-                  </button>
-                </div>
-              </div>
+        <div className="recent-activity">
+          <h4>Recent Stock Activity</h4>
+          <div className="activity-list">
+            <div className="activity-item">
+              <span className="activity-time">2 hours ago</span>
+              <span className="activity-text">Stock adjusted for Paracetamol 500mg</span>
             </div>
-          )
-        })}
-      </div>
-
-      {filteredStock.length === 0 && (
-        <div className="empty-state">
-          <Package size={48} />
-          <h3>No items found</h3>
-          <p>Try adjusting your search or filter criteria</p>
-        </div>
-      )}
-
-      {/* Quick Stats Summary */}
-      <div className="quick-summary">
-        <div className="summary-item">
-          <CheckCircle size={20} />
-          <span>In Stock: {stockData.filter(item => item.status === 'in_stock').length}</span>
-        </div>
-        <div className="summary-item warning">
-          <AlertTriangle size={20} />
-          <span>Low Stock: {stockData.filter(item => item.status === 'low_stock').length}</span>
-        </div>
-        <div className="summary-item danger">
-          <XCircle size={20} />
-          <span>Out of Stock: {stockData.filter(item => item.status === 'out_of_stock').length}</span>
-        </div>
-        <div className="summary-item info">
-          <Calendar size={20} />
-          <span>Near Expiry: {stockData.reduce((sum, item) => sum + item.nearExpiry, 0)} batches</span>
+            <div className="activity-item">
+              <span className="activity-time">4 hours ago</span>
+              <span className="activity-text">New stock received from MedSupply Co.</span>
+            </div>
+            <div className="activity-item">
+              <span className="activity-time">6 hours ago</span>
+              <span className="activity-text">Low stock alert for Amoxicillin 250mg</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default StockOverview
+export default StockOverview;

@@ -1,378 +1,367 @@
-import { useState } from 'react'
-import {
-  AlertTriangle,
-  Package,
-  Plus,
-  Settings,
-  ShoppingCart,
-  Bell,
-  BellOff,
-  Search,
-  Filter
-} from 'lucide-react'
-import './LowStockAlerts.css'
+import { useState } from 'react';
+import { AlertTriangle, Package, ShoppingCart, Settings, Bell, Download } from 'lucide-react';
+import { format } from 'date-fns';
+import { useStock } from '../../contexts/StockContext';
 
 const LowStockAlerts = () => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterBy, setFilterBy] = useState('all')
-  const [showSettings, setShowSettings] = useState(false)
+  const { 
+    getLowStockItems, 
+    getOutOfStockItems, 
+    updateReorderLevel, 
+    loading 
+  } = useStock();
 
-  // Sample low stock data
-  const lowStockItems = [
-    {
-      id: 1,
-      name: 'Amoxicillin 250mg',
-      brand: 'Amoxil',
-      category: 'Antibiotic',
-      currentStock: 25,
-      reorderLevel: 30,
-      maxStock: 200,
-      suggestedOrder: 175,
-      supplier: 'PharmaCorp',
-      lastOrderDate: '2024-02-10',
-      avgDailySales: 5,
-      daysUntilStockOut: 5,
-      priority: 'high',
-      alertEnabled: true
-    },
-    {
-      id: 2,
-      name: 'Cough Syrup 100ml',
-      brand: 'Benadryl',
-      category: 'Cough & Cold',
-      currentStock: 15,
-      reorderLevel: 25,
-      maxStock: 100,
-      suggestedOrder: 85,
-      supplier: 'MedSupply Co.',
-      lastOrderDate: '2024-02-05',
-      avgDailySales: 3,
-      daysUntilStockOut: 5,
-      priority: 'medium',
-      alertEnabled: true
-    },
-    {
-      id: 3,
-      name: 'Insulin Pen',
-      brand: 'NovoRapid',
-      category: 'Diabetes',
-      currentStock: 8,
-      reorderLevel: 15,
-      maxStock: 50,
-      suggestedOrder: 42,
-      supplier: 'DiabetesCare',
-      lastOrderDate: '2024-01-28',
-      avgDailySales: 2,
-      daysUntilStockOut: 4,
-      priority: 'critical',
-      alertEnabled: true
-    },
-    {
-      id: 4,
-      name: 'Vitamin B12 Tablets',
-      brand: 'HealthVit',
-      category: 'Vitamin',
-      currentStock: 35,
-      reorderLevel: 40,
-      maxStock: 200,
-      suggestedOrder: 165,
-      supplier: 'VitaCorp',
-      lastOrderDate: '2024-02-01',
-      avgDailySales: 4,
-      daysUntilStockOut: 9,
-      priority: 'low',
-      alertEnabled: false
+  const [alertType, setAlertType] = useState('all');
+  const [showReorderSettings, setShowReorderSettings] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [newReorderLevel, setNewReorderLevel] = useState('');
+
+  const lowStockItems = getLowStockItems();
+  const outOfStockItems = getOutOfStockItems();
+  const allAlerts = [...lowStockItems, ...outOfStockItems];
+
+  const getFilteredAlerts = () => {
+    switch (alertType) {
+      case 'low_stock':
+        return lowStockItems;
+      case 'out_of_stock':
+        return outOfStockItems;
+      default:
+        return allAlerts;
     }
-  ]
+  };
 
-  const filteredItems = lowStockItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    if (filterBy === 'all') return matchesSearch
-    if (filterBy === 'critical') return matchesSearch && item.priority === 'critical'
-    if (filterBy === 'high') return matchesSearch && item.priority === 'high'
-    if (filterBy === 'medium') return matchesSearch && item.priority === 'medium'
-    if (filterBy === 'low') return matchesSearch && item.priority === 'low'
-    
-    return matchesSearch
-  })
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
-  const getPriorityInfo = (priority) => {
-    const priorityMap = {
-      critical: { label: 'Critical', class: 'priority-critical', color: '#ef4444' },
-      high: { label: 'High', class: 'priority-high', color: '#f59e0b' },
-      medium: { label: 'Medium', class: 'priority-medium', color: '#3b82f6' },
-      low: { label: 'Low', class: 'priority-low', color: '#10b981' }
+  const getAlertPriority = (item) => {
+    if (item.isOutOfStock) {
+      return { level: 'critical', label: 'Critical', color: '#ef4444' };
+    } else if (item.currentStock <= item.reorderLevel * 0.5) {
+      return { level: 'high', label: 'High', color: '#f59e0b' };
+    } else {
+      return { level: 'medium', label: 'Medium', color: '#10b981' };
     }
-    return priorityMap[priority] || priorityMap.low
-  }
+  };
 
-  const formatCurrency = (amount) => `₹${amount.toFixed(2)}`
+  const calculateReorderQuantity = (item) => {
+    return Math.max(item.maxStock - item.currentStock, item.reorderLevel * 2);
+  };
 
-  const generatePurchaseOrder = (item) => {
-    console.log('Generating purchase order for:', item.name)
-    // Implement purchase order generation
-  }
+  const handleReorderLevelUpdate = (item) => {
+    setSelectedItem(item);
+    setNewReorderLevel(item.reorderLevel.toString());
+    setShowReorderSettings(true);
+  };
 
-  const toggleAlert = (itemId) => {
-    console.log('Toggling alert for item:', itemId)
-    // Implement alert toggle
+  const saveReorderLevel = () => {
+    if (selectedItem && newReorderLevel) {
+      updateReorderLevel(selectedItem.id, parseInt(newReorderLevel));
+      setShowReorderSettings(false);
+      setSelectedItem(null);
+      setNewReorderLevel('');
+    }
+  };
+
+  const generateReorderList = () => {
+    const reorderList = getFilteredAlerts().map(item => ({
+      name: item.name,
+      currentStock: item.currentStock,
+      reorderLevel: item.reorderLevel,
+      suggestedQuantity: calculateReorderQuantity(item),
+      supplier: item.supplier,
+      estimatedCost: calculateReorderQuantity(item) * item.costPrice
+    }));
+
+    // In a real app, this would generate and download a PDF/Excel file
+    console.log('Reorder List:', reorderList);
+    alert('Reorder list generated! Check console for details.');
+  };
+
+  if (loading) {
+    return (
+      <div className="stock-container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading stock alerts...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="low-stock-alerts" style={{ padding: '2rem' }}>
-      <div className="alerts-header" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        marginBottom: '2rem',
-        gap: '2rem'
-      }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Low Stock Alerts
-          </h2>
-          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
-            Monitor and manage items that need reordering
-          </p>
+    <div className="stock-container">
+      {/* Alert Summary */}
+      <div className="stock-section">
+        <div className="section-header">
+          <h3>Stock Alert Summary</h3>
+          <div className="alert-actions">
+            <button 
+              className="btn btn-primary"
+              onClick={generateReorderList}
+            >
+              <Download size={16} />
+              Generate Reorder List
+            </button>
+            <button className="btn btn-outline">
+              <Bell size={16} />
+              Alert Settings
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+
+        <div className="alert-summary">
+          <div className="summary-card critical">
+            <div className="summary-icon">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="summary-content">
+              <div className="summary-value">{outOfStockItems.length}</div>
+              <div className="summary-label">Out of Stock</div>
+              <div className="summary-detail">Immediate action required</div>
+            </div>
+          </div>
+          
+          <div className="summary-card warning">
+            <div className="summary-icon">
+              <Package size={24} />
+            </div>
+            <div className="summary-content">
+              <div className="summary-value">{lowStockItems.length}</div>
+              <div className="summary-label">Low Stock</div>
+              <div className="summary-detail">Below reorder level</div>
+            </div>
+          </div>
+          
+          <div className="summary-card info">
+            <div className="summary-icon">
+              <ShoppingCart size={24} />
+            </div>
+            <div className="summary-content">
+              <div className="summary-value">
+                {formatCurrency(allAlerts.reduce((sum, item) => sum + (calculateReorderQuantity(item) * item.costPrice), 0))}
+              </div>
+              <div className="summary-label">Estimated Reorder Cost</div>
+              <div className="summary-detail">For all alerts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Alert Filter */}
+      <div className="alert-filters">
+        <div className="filter-tabs">
           <button 
-            className="btn btn-secondary"
-            onClick={() => setShowSettings(true)}
+            className={`filter-tab ${alertType === 'all' ? 'active' : ''}`}
+            onClick={() => setAlertType('all')}
           >
-            <Settings size={18} />
-            Alert Settings
+            All Alerts ({allAlerts.length})
+          </button>
+          <button 
+            className={`filter-tab ${alertType === 'out_of_stock' ? 'active' : ''}`}
+            onClick={() => setAlertType('out_of_stock')}
+          >
+            Out of Stock ({outOfStockItems.length})
+          </button>
+          <button 
+            className={`filter-tab ${alertType === 'low_stock' ? 'active' : ''}`}
+            onClick={() => setAlertType('low_stock')}
+          >
+            Low Stock ({lowStockItems.length})
           </button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '1rem', 
-        marginBottom: '2rem' 
-      }}>
-        {[
-          { label: 'Critical Items', count: lowStockItems.filter(i => i.priority === 'critical').length, color: '#ef4444' },
-          { label: 'High Priority', count: lowStockItems.filter(i => i.priority === 'high').length, color: '#f59e0b' },
-          { label: 'Medium Priority', count: lowStockItems.filter(i => i.priority === 'medium').length, color: '#3b82f6' },
-          { label: 'Total Alerts', count: lowStockItems.filter(i => i.alertEnabled).length, color: '#10b981' }
-        ].map((stat, index) => (
-          <div key={index} style={{
-            background: 'var(--bg-primary)',
-            padding: '1.5rem',
-            borderRadius: 'var(--border-radius)',
-            border: '1px solid var(--border-color)',
-            borderLeft: `4px solid ${stat.color}`
-          }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              {stat.label}
-            </h4>
-            <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: stat.color }}>
-              {stat.count}
-            </p>
-          </div>
-        ))}
+      {/* Alert List */}
+      <div className="alert-list">
+        {getFilteredAlerts().map((item) => {
+          const priority = getAlertPriority(item);
+          const reorderQuantity = calculateReorderQuantity(item);
+          
+          return (
+            <div key={item.id} className={`alert-item ${priority.level}`}>
+              <div className={`alert-icon ${priority.level}`}>
+                <AlertTriangle size={20} />
+              </div>
+              
+              <div className="alert-content">
+                <div className="alert-header">
+                  <div className="alert-title">{item.name}</div>
+                  <div className={`alert-priority ${priority.level}`}>
+                    {priority.label} Priority
+                  </div>
+                </div>
+                
+                <div className="alert-details">
+                  <div className="alert-info">
+                    <span>Current Stock: <strong>{item.currentStock}</strong></span>
+                    <span>Reorder Level: <strong>{item.reorderLevel}</strong></span>
+                    <span>Brand: {item.brand}</span>
+                    <span>Category: {item.category}</span>
+                  </div>
+                  
+                  <div className="alert-metrics">
+                    <div className="metric">
+                      <span className="metric-label">Suggested Reorder</span>
+                      <span className="metric-value">{reorderQuantity} units</span>
+                    </div>
+                    <div className="metric">
+                      <span className="metric-label">Estimated Cost</span>
+                      <span className="metric-value">{formatCurrency(reorderQuantity * item.costPrice)}</span>
+                    </div>
+                    <div className="metric">
+                      <span className="metric-label">Supplier</span>
+                      <span className="metric-value">{item.supplier}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="alert-description">
+                  {item.isOutOfStock ? (
+                    <span className="alert-message critical">
+                      <AlertTriangle size={14} />
+                      Item is completely out of stock. Immediate reordering required.
+                    </span>
+                  ) : (
+                    <span className="alert-message warning">
+                      <Package size={14} />
+                      Stock level is below reorder point. Consider reordering soon.
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="alert-actions">
+                <button 
+                  className="btn btn-outline btn-small"
+                  onClick={() => handleReorderLevelUpdate(item)}
+                >
+                  <Settings size={14} />
+                  Adjust Reorder Level
+                </button>
+                <button className="btn btn-secondary btn-small">
+                  <ShoppingCart size={14} />
+                  Create Purchase Order
+                </button>
+                {item.isOutOfStock && (
+                  <button className="btn btn-primary btn-small">
+                    <AlertTriangle size={14} />
+                    Urgent Reorder
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Search and Filter */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '1rem', 
-        marginBottom: '2rem', 
-        flexWrap: 'wrap',
-        alignItems: 'center'
-      }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '320px' }}>
-          <Search size={18} style={{
-            position: 'absolute',
-            left: '0.75rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-light)',
-            zIndex: 2,
-            pointerEvents: 'none',
-            width: '18px',
-            height: '18px'
-          }} />
-          <input
-            type="text"
-            placeholder="Search medicines, brands, or categories..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem 0.875rem 3.75rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--border-radius)',
-              fontSize: '0.875rem',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-        
-        <select
-          value={filterBy}
-          onChange={(e) => setFilterBy(e.target.value)}
-          style={{
-            padding: '0.75rem 1rem',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '0.875rem',
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)'
-          }}
-        >
-          <option value="all">All Priorities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-      </div>
-
-      {/* Alerts Table */}
-      <div style={{ 
-        background: 'var(--bg-primary)', 
-        borderRadius: 'var(--border-radius)', 
-        border: '1px solid var(--border-color)',
-        overflow: 'hidden'
-      }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'var(--bg-secondary)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Medicine</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Current Stock</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Reorder Level</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Days Until Out</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Suggested Order</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Priority</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item) => {
-                const priorityInfo = getPriorityInfo(item.priority)
-                return (
-                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Package size={16} />
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            {item.brand} • {item.category}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ 
-                        fontWeight: 600, 
-                        color: item.currentStock <= item.reorderLevel ? '#ef4444' : 'var(--text-primary)' 
-                      }}>
-                        {item.currentStock}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem' }}>{item.reorderLevel}</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ 
-                        fontWeight: 600, 
-                        color: item.daysUntilStockOut <= 3 ? '#ef4444' : item.daysUntilStockOut <= 7 ? '#f59e0b' : 'var(--text-primary)' 
-                      }}>
-                        {item.daysUntilStockOut} days
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>
-                        {item.suggestedOrder}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '1rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        background: `${priorityInfo.color}20`,
-                        color: priorityInfo.color
-                      }}>
-                        {priorityInfo.label}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => generatePurchaseOrder(item)}
-                          style={{
-                            padding: '0.5rem',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            color: 'var(--secondary-color)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title="Generate Purchase Order"
-                        >
-                          <ShoppingCart size={14} />
-                        </button>
-                        <button
-                          onClick={() => toggleAlert(item.id)}
-                          style={{
-                            padding: '0.5rem',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            background: item.alertEnabled ? 'rgba(245, 158, 11, 0.1)' : 'rgba(107, 114, 128, 0.1)',
-                            color: item.alertEnabled ? 'var(--accent-color)' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title={item.alertEnabled ? 'Disable Alert' : 'Enable Alert'}
-                        >
-                          {item.alertEnabled ? <Bell size={14} /> : <BellOff size={14} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {filteredItems.length === 0 && (
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          padding: '4rem 2rem',
-          textAlign: 'center',
-          color: 'var(--text-light)'
-        }}>
-          <AlertTriangle size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0', color: 'var(--text-secondary)' }}>
-            No low stock alerts found
-          </h3>
-          <p style={{ fontSize: '0.875rem', margin: 0 }}>
-            All items are above their reorder levels
-          </p>
+      {/* Empty State */}
+      {getFilteredAlerts().length === 0 && (
+        <div className="empty-state">
+          <Package size={48} />
+          <h3>No stock alerts</h3>
+          <p>All items are above their reorder levels</p>
         </div>
       )}
-    </div>
-  )
-}
 
-export default LowStockAlerts
+      {/* Reorder Level Settings Modal */}
+      {showReorderSettings && selectedItem && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h4>Update Reorder Level - {selectedItem.name}</h4>
+              <button 
+                className="btn-icon"
+                onClick={() => setShowReorderSettings(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="reorder-settings">
+                <div className="current-info">
+                  <div className="info-item">
+                    <span>Current Stock:</span>
+                    <span>{selectedItem.currentStock}</span>
+                  </div>
+                  <div className="info-item">
+                    <span>Current Reorder Level:</span>
+                    <span>{selectedItem.reorderLevel}</span>
+                  </div>
+                  <div className="info-item">
+                    <span>Max Stock:</span>
+                    <span>{selectedItem.maxStock}</span>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label>New Reorder Level</label>
+                  <input
+                    type="number"
+                    value={newReorderLevel}
+                    onChange={(e) => setNewReorderLevel(e.target.value)}
+                    className="form-input"
+                    min="1"
+                    max={selectedItem.maxStock}
+                  />
+                  <small>Recommended: 10-20% of max stock capacity</small>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn btn-outline"
+                onClick={() => setShowReorderSettings(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={saveReorderLevel}
+              >
+                Update Reorder Level
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Statistics */}
+      <div className="alert-statistics">
+        <div className="stats-card">
+          <h4>Alert Statistics</h4>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-label">Total Alerts</span>
+              <span className="stat-value">{allAlerts.length}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Critical Alerts</span>
+              <span className="stat-value">{outOfStockItems.length}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Average Reorder Level</span>
+              <span className="stat-value">
+                {Math.round(allAlerts.reduce((sum, item) => sum + item.reorderLevel, 0) / allAlerts.length) || 0}
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Items Need Attention</span>
+              <span className="stat-value">{allAlerts.filter(item => item.currentStock === 0 || item.currentStock <= item.reorderLevel * 0.5).length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LowStockAlerts;

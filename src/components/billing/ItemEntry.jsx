@@ -1,260 +1,308 @@
-import React, { useState } from 'react';
-import {
-  Search,
-  Scan,
-  Plus,
-  Minus,
-  Package,
-  AlertTriangle,
-  Calendar,
-  Tag,
-  Pill
-} from 'lucide-react';
-import './ItemEntry.css';
+import { useState } from 'react';
+import { Search, Scan, Package, AlertTriangle, Plus } from 'lucide-react';
+import { useStock } from '../../contexts/StockContext';
+import { useBilling } from '../../contexts/BillingContext';
 
-const ItemEntry = ({ medicines, onAddItem }) => {
+const ItemEntry = () => {
+  const { stockItems } = useStock();
+  const { addItemToBill } = useBilling();
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [showScanner, setShowScanner] = useState(false);
+  const [customPrice, setCustomPrice] = useState('');
+  const [discount, setDiscount] = useState(0);
 
-  const filteredMedicines = medicines.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicine.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicine.composition.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter items based on search term
+  const filteredItems = stockItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.salt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.batchNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  ).slice(0, 8); // Show only top 8 results
 
-  const handleAddToCart = () => {
-    if (selectedMedicine && quantity > 0) {
-      if (quantity <= selectedMedicine.stock) {
-        onAddItem(selectedMedicine, quantity);
-        setSelectedMedicine(null);
-        setQuantity(1);
-        setSearchTerm('');
-      } else {
-        alert(`Only ${selectedMedicine.stock} units available in stock`);
-      }
+  const handleItemSearch = (value) => {
+    setSearchTerm(value);
+    setShowSearchResults(value.length > 0);
+  };
+
+  const handleItemSelect = (item) => {
+    setSelectedItem(item);
+    setCustomPrice(item.sellingPrice.toString());
+    setSearchTerm(item.name);
+    setShowSearchResults(false);
+    setQuantity(1);
+    setDiscount(0);
+  };
+
+  const handleAddToBill = () => {
+    if (!selectedItem) {
+      alert('Please select an item first');
+      return;
     }
+
+    if (quantity > selectedItem.currentStock) {
+      alert(`Only ${selectedItem.currentStock} units available in stock`);
+      return;
+    }
+
+    const unitPrice = parseFloat(customPrice) || selectedItem.sellingPrice;
+    const discountAmount = (unitPrice * quantity * discount) / 100;
+    const totalPrice = (unitPrice * quantity) - discountAmount;
+
+    const billItem = {
+      id: selectedItem.id,
+      name: selectedItem.name,
+      brand: selectedItem.brand,
+      batchNumber: selectedItem.batchNumber,
+      expiryDate: selectedItem.expiryDate,
+      mrp: selectedItem.mrp,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      discount: discountAmount,
+      total: totalPrice,
+      availableStock: selectedItem.currentStock
+    };
+
+    addItemToBill(billItem);
+    
+    // Reset form
+    setSelectedItem(null);
+    setSearchTerm('');
+    setQuantity(1);
+    setCustomPrice('');
+    setDiscount(0);
   };
 
   const handleBarcodeScanner = () => {
-    setShowScanner(true);
-    // In a real implementation, this would open camera/barcode scanner
-    // For demo, we'll simulate finding a medicine
-    setTimeout(() => {
-      const randomMedicine = medicines[Math.floor(Math.random() * medicines.length)];
-      setSelectedMedicine(randomMedicine);
-      setShowScanner(false);
-    }, 2000);
+    // In a real app, this would open barcode scanner
+    alert('Barcode scanner functionality would be implemented here');
   };
 
-  const getStockStatus = (stock) => {
-    if (stock === 0) return { status: 'out-of-stock', text: 'Out of Stock', color: '#ef4444' };
-    if (stock < 10) return { status: 'low-stock', text: 'Low Stock', color: '#f59e0b' };
-    return { status: 'in-stock', text: 'In Stock', color: '#10b981' };
+  const getStockStatus = (item) => {
+    if (item.isOutOfStock) {
+      return { status: 'out-of-stock', label: 'Out of Stock', color: '#ef4444' };
+    } else if (item.isLowStock) {
+      return { status: 'low-stock', label: 'Low Stock', color: '#f59e0b' };
+    } else {
+      return { status: 'in-stock', label: 'In Stock', color: '#10b981' };
+    }
   };
 
-  const isExpiringSoon = (expiryDate) => {
-    const expiry = new Date(expiryDate);
-    const today = new Date();
-    const diffTime = expiry - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 90; // Expiring within 3 months
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   return (
     <div className="item-entry">
-      <div className="item-entry-header">
-        <h3>Add Medicine</h3>
-        <button 
-          className="btn btn-outline btn-sm"
-          onClick={handleBarcodeScanner}
-          disabled={showScanner}
-        >
-          <Scan size={16} />
-          {showScanner ? 'Scanning...' : 'Scan'}
-        </button>
-      </div>
-
-      {/* Search Section */}
-      <div className="medicine-search">
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
+      {/* Item Search */}
+      <div className="item-search">
+        <div className="search-input-container">
+          <Search size={16} className="search-icon" />
           <input
             type="text"
-            placeholder="Search by name, brand, or composition..."
+            placeholder="Search by name, salt, brand, category, or batch number..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            onChange={(e) => handleItemSearch(e.target.value)}
+            className="item-search-input"
           />
+          <button 
+            className="barcode-btn"
+            onClick={handleBarcodeScanner}
+            title="Scan Barcode"
+          >
+            <Scan size={16} />
+          </button>
         </div>
-      </div>
-
-      {/* Search Results */}
-      {searchTerm && (
-        <div className="medicine-results">
-          {filteredMedicines.length > 0 ? (
-            filteredMedicines.map(medicine => {
-              const stockStatus = getStockStatus(medicine.stock);
-              const expiringSoon = isExpiringSoon(medicine.expiry);
-              
+        
+        {showSearchResults && filteredItems.length > 0 && (
+          <div className="search-results">
+            {filteredItems.map((item) => {
+              const stockStatus = getStockStatus(item);
               return (
-                <div 
-                  key={medicine.id} 
-                  className={`medicine-result-item ${selectedMedicine?.id === medicine.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedMedicine(medicine)}
+                <div
+                  key={item.id}
+                  className={`search-result-item ${stockStatus.status}`}
+                  onClick={() => handleItemSelect(item)}
                 >
-                  <div className="medicine-info">
-                    <div className="medicine-header">
-                      <h4>{medicine.name}</h4>
-                      <div className="medicine-badges">
-                        <span 
-                          className={`stock-badge ${stockStatus.status}`}
-                          style={{ color: stockStatus.color }}
-                        >
-                          {stockStatus.text}
-                        </span>
-                        {expiringSoon && (
-                          <span className="expiry-badge">
-                            <AlertTriangle size={12} />
-                            Expiring Soon
-                          </span>
-                        )}
-                      </div>
+                  <div className="result-header">
+                    <div className="result-name">{item.name}</div>
+                    <div 
+                      className="stock-indicator"
+                      style={{ color: stockStatus.color }}
+                    >
+                      {stockStatus.label}
                     </div>
-                    
-                    <div className="medicine-details">
-                      <p className="medicine-brand">
-                        <Tag size={14} />
-                        {medicine.brand}
-                      </p>
-                      <p className="medicine-composition">
-                        <Pill size={14} />
-                        {medicine.composition}
-                      </p>
-                      <p className="medicine-batch">
-                        <Package size={14} />
-                        Batch: {medicine.batchNo}
-                      </p>
-                      <p className="medicine-expiry">
-                        <Calendar size={14} />
-                        Exp: {new Date(medicine.expiry).toLocaleDateString()}
-                      </p>
-                    </div>
-                    
-                    <div className="medicine-pricing">
-                      <div className="price-info">
-                        <span className="mrp">MRP: ₹{medicine.mrp}</span>
-                        <span className="selling-price">₹{medicine.sellingPrice}</span>
-                      </div>
-                      <div className="stock-info">
-                        <span className="stock-count">{medicine.stock} units</span>
-                      </div>
-                    </div>
+                  </div>
+                  <div className="result-details">
+                    <span>Brand: {item.brand}</span>
+                    <span>Salt: {item.salt}</span>
+                    <span>Batch: {item.batchNumber}</span>
+                  </div>
+                  <div className="result-pricing">
+                    <span>MRP: {formatCurrency(item.mrp)}</span>
+                    <span>Price: {formatCurrency(item.sellingPrice)}</span>
+                    <span>Stock: {item.currentStock}</span>
                   </div>
                 </div>
               );
-            })
-          ) : (
-            <div className="no-results">
-              <Package size={48} />
-              <p>No medicines found</p>
-              <p>Try searching with different keywords</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Selected Medicine Details */}
-      {selectedMedicine && (
-        <div className="selected-medicine">
-          <div className="selected-medicine-header">
-            <h4>Selected Medicine</h4>
-            <button 
-              className="btn btn-outline btn-sm"
-              onClick={() => setSelectedMedicine(null)}
-            >
-              Clear
-            </button>
+            })}
           </div>
-          
-          <div className="selected-medicine-info">
-            <div className="medicine-summary">
-              <h5>{selectedMedicine.name}</h5>
-              <p>{selectedMedicine.brand} - {selectedMedicine.composition}</p>
-              <div className="price-display">
-                <span className="price">₹{selectedMedicine.sellingPrice}</span>
-                <span className="mrp">MRP: ₹{selectedMedicine.mrp}</span>
-              </div>
+        )}
+      </div>
+
+      {/* Selected Item Details */}
+      {selectedItem && (
+        <div className="selected-item">
+          <div className="item-details">
+            <div className="item-header">
+              <div className="item-name">{selectedItem.name}</div>
+              <div className="item-brand">{selectedItem.brand}</div>
             </div>
             
-            <div className="quantity-section">
-              <label>Quantity</label>
-              <div className="quantity-controls">
-                <button 
-                  className="quantity-btn"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus size={16} />
-                </button>
+            <div className="item-info-grid">
+              <div className="info-item">
+                <span className="info-label">Salt:</span>
+                <span className="info-value">{selectedItem.salt}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Batch:</span>
+                <span className="info-value">{selectedItem.batchNumber}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Expiry:</span>
+                <span className="info-value">
+                  {new Date(selectedItem.expiryDate).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Available:</span>
+                <span className="info-value">{selectedItem.currentStock} units</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">MRP:</span>
+                <span className="info-value">{formatCurrency(selectedItem.mrp)}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Location:</span>
+                <span className="info-value">{selectedItem.location}</span>
+              </div>
+            </div>
+
+            {/* Stock Warnings */}
+            {selectedItem.isNearExpiry && (
+              <div className="stock-warning expiry">
+                <AlertTriangle size={14} />
+                Expires in {selectedItem.daysToExpiry} days
+              </div>
+            )}
+            
+            {selectedItem.isLowStock && (
+              <div className="stock-warning low-stock">
+                <AlertTriangle size={14} />
+                Low stock - only {selectedItem.currentStock} units left
+              </div>
+            )}
+          </div>
+
+          {/* Quantity and Pricing */}
+          <div className="item-entry-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Quantity</label>
                 <input
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                   className="quantity-input"
                   min="1"
-                  max={selectedMedicine.stock}
+                  max={selectedItem.currentStock}
                 />
-                <button 
-                  className="quantity-btn"
-                  onClick={() => setQuantity(Math.min(selectedMedicine.stock, quantity + 1))}
-                  disabled={quantity >= selectedMedicine.stock}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <span className="stock-available">
-                {selectedMedicine.stock} available
-              </span>
-            </div>
-            
-            <div className="total-section">
-              <div className="total-display">
-                <span className="total-label">Total:</span>
-                <span className="total-amount">
-                  ₹{(selectedMedicine.sellingPrice * quantity).toFixed(2)}
-                </span>
               </div>
               
-              <button 
-                className="btn btn-primary btn-add-to-cart"
-                onClick={handleAddToCart}
-                disabled={quantity > selectedMedicine.stock || selectedMedicine.stock === 0}
-              >
-                <Plus size={18} />
-                Add to Cart
-              </button>
+              <div className="form-group">
+                <label>Unit Price</label>
+                <input
+                  type="number"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                  className="price-input"
+                  step="0.01"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Discount (%)</label>
+                <input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  className="discount-input"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                />
+              </div>
             </div>
+
+            {/* Price Calculation */}
+            <div className="price-calculation">
+              <div className="calc-row">
+                <span>Subtotal:</span>
+                <span>{formatCurrency((parseFloat(customPrice) || 0) * quantity)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="calc-row discount">
+                  <span>Discount ({discount}%):</span>
+                  <span>-{formatCurrency(((parseFloat(customPrice) || 0) * quantity * discount) / 100)}</span>
+                </div>
+              )}
+              <div className="calc-row total">
+                <span>Total:</span>
+                <span>
+                  {formatCurrency(
+                    ((parseFloat(customPrice) || 0) * quantity) - 
+                    (((parseFloat(customPrice) || 0) * quantity * discount) / 100)
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <button 
+              className="btn btn-primary"
+              onClick={handleAddToBill}
+              disabled={!selectedItem || quantity > selectedItem.currentStock}
+            >
+              <Plus size={16} />
+              Add to Bill
+            </button>
           </div>
         </div>
       )}
 
-      {/* Barcode Scanner Modal */}
-      {showScanner && (
-        <div className="scanner-modal">
-          <div className="scanner-content">
-            <div className="scanner-animation">
-              <Scan size={48} />
-              <p>Scanning barcode...</p>
-              <div className="scanner-line"></div>
-            </div>
-            <button 
-              className="btn btn-outline"
-              onClick={() => setShowScanner(false)}
-            >
-              Cancel
-            </button>
+      {/* Quick Add Suggestions */}
+      {!selectedItem && searchTerm.length === 0 && (
+        <div className="quick-suggestions">
+          <h4>Quick Add - Popular Items</h4>
+          <div className="suggestion-grid">
+            {stockItems.slice(0, 6).map((item) => (
+              <div
+                key={item.id}
+                className="suggestion-item"
+                onClick={() => handleItemSelect(item)}
+              >
+                <Package size={16} />
+                <div className="suggestion-name">{item.name}</div>
+                <div className="suggestion-price">{formatCurrency(item.sellingPrice)}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
