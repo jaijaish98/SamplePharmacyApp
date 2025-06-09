@@ -1,0 +1,170 @@
+/* Google Sign-In Button Styles */
+.google-signin-container {
+  width: 100%;
+  margin: 0;
+}
+
+.google-button-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.google-button-container.hidden {
+  display: none;
+}
+
+/* Custom Google Sign-In Button */
+.google-signin-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #dadce0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #3c4043;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.google-signin-btn:hover:not(.disabled):not(.loading) {
+  border-color: #c1c7cd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.google-signin-btn:active:not(.disabled):not(.loading) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.google-signin-btn.loading {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.google-signin-btn.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  border-color: #e8eaed;
+  color: #9aa0a6;
+}
+
+.google-signin-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.google-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.google-signin-btn span {
+  font-weight: 500;
+  letter-spacing: 0.25px;
+}
+
+/* Loading Spinner */
+.google-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #4285f4;
+  border-radius: 50%;
+  animation: googleSpin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes googleSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Dark theme support */
+[data-theme="dark"] .google-signin-btn {
+  background: #2d3748;
+  border-color: #4a5568;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .google-signin-btn:hover:not(.disabled):not(.loading) {
+  border-color: #718096;
+  background: #374151;
+}
+
+[data-theme="dark"] .google-signin-btn.disabled {
+  border-color: #4a5568;
+  color: #718096;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .google-signin-btn {
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .google-signin-content {
+    gap: 0.625rem;
+  }
+  
+  .google-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .google-spinner {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .google-signin-btn {
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .google-signin-content {
+    gap: 0.5rem;
+  }
+}
+
+/* Focus styles for accessibility */
+.google-signin-btn:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .google-signin-btn {
+    border-width: 3px;
+    font-weight: 600;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .google-signin-btn {
+    transition: none;
+  }
+  
+  .google-spinner {
+    animation: none;
+  }
+  
+  .google-signin-btn:hover:not(.disabled):not(.loading) {
+    transform: none;
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, User, Lock } from 'lucide-react';
+import GoogleSignInButton from './GoogleSignInButton';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -74,6 +75,26 @@ const Login = ({ onLogin }) => {
     });
   };
 
+  const handleGoogleSuccess = (userData) => {
+    console.log('Google Sign-In Success:', userData);
+    // Call the parent onLogin function with Google user data
+    onLogin({
+      email: userData.email,
+      name: userData.name,
+      role: userData.role || 'Admin',
+      picture: userData.picture,
+      loginMethod: 'google',
+      id: userData.id
+    });
+  };
+
+  const handleGoogleError = (error) => {
+    console.error('Google Sign-In Error:', error);
+    setErrors({
+      general: 'Google Sign-In failed. Please try again or use email/password.'
+    });
+  };
+
   return (
     <div className="login-container">
       <div className="login-background">
@@ -105,6 +126,12 @@ const Login = ({ onLogin }) => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="login-form">
+            {/* General Error Message */}
+            {errors.general && (
+              <div className="error-banner">
+                <span className="error-message">{errors.general}</span>
+              </div>
+            )}
             {/* Email/Username Field */}
             <div className="form-group">
               <label htmlFor="email" className="form-label">
@@ -182,6 +209,18 @@ const Login = ({ onLogin }) => {
                 'Sign In'
               )}
             </button>
+
+            {/* Google SSO */}
+            <div className="sso-section">
+              <div className="divider">
+                <span>or</span>
+              </div>
+              <GoogleSignInButton
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                disabled={isLoading}
+              />
+            </div>
 
             {/* Demo Login */}
             <div className="demo-section">

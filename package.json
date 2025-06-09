@@ -12,13 +12,15 @@
   "dependencies": {
     "@fontsource/playfair-display": "^5.2.6",
     "@fontsource/poppins": "^5.2.6",
+    "@google-cloud/local-auth": "^3.0.1",
+    "date-fns": "^3.6.0",
+    "google-auth-library": "^9.15.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.513.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "recharts": "^2.12.7",
-    "date-fns": "^3.6.0",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

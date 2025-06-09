@@ -22,6 +22,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const handleLogin = (userData) => {
+    console.log('User logged in:', userData)
     setUser(userData)
     setIsAuthenticated(true)
   }

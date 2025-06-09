@@ -257,6 +257,20 @@
   margin-top: 0.25rem;
 }
 
+.error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.error-banner .error-message {
+  margin: 0;
+  font-weight: 500;
+}
+
 .form-options {
   display: flex;
   justify-content: space-between;
@@ -342,8 +356,12 @@
   100% { transform: rotate(360deg); }
 }
 
-.demo-section {
+.sso-section {
   margin-top: 1.5rem;
+}
+
+.demo-section {
+  margin-top: 1rem;
 }
 
 .divider {
