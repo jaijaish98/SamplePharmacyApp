@@ -1,7 +1,24 @@
-import { Search, Bell, User, Menu } from 'lucide-react'
+import { Search, Bell, User, Menu, LogOut } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import './Header.css'
 
-const Header = ({ activeSection }) => {
+const Header = ({ activeSection, user, onLogout }) => {
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const userMenuRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -54,11 +71,38 @@ const Header = ({ activeSection }) => {
           <span className="notification-badge">3</span>
         </button>
 
-        <div className="user-menu">
-          <button className="user-btn">
+        <div className="user-menu" ref={userMenuRef}>
+          <button
+            className="user-btn"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+          >
             <User size={20} />
-            <span className="user-name">Admin</span>
+            <span className="user-name">{user?.name || 'Admin'}</span>
           </button>
+
+          {showUserMenu && (
+            <div className="user-dropdown">
+              <div className="user-info">
+                <div className="user-avatar">
+                  <User size={16} />
+                </div>
+                <div className="user-details">
+                  <div className="user-display-name">{user?.name || 'Admin'}</div>
+                  <div className="user-email">{user?.email || 'admin@sathyapharmacy.com'}</div>
+                  <div className="user-role">{user?.role || 'Administrator'}</div>
+                </div>
+              </div>
+              <div className="dropdown-divider"></div>
+              <button className="dropdown-item" onClick={() => setShowUserMenu(false)}>
+                <User size={16} />
+                Profile Settings
+              </button>
+              <button className="dropdown-item logout-btn" onClick={onLogout}>
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

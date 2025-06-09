@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { CreditCard, DollarSign, Smartphone, Wallet, Calculator } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { useBilling } from '../../contexts/BillingContext';
 
 const PaymentPanel = ({ onClose, onPaymentComplete }) => {
   const { currentBill, processPayment } = useBilling();
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [amountReceived, setAmountReceived] = useState(currentBill.total.toString());
   const [processing, setProcessing] = useState(false);
+  const paymentMethod = 'Cash'; // Default to Cash payment only
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -23,7 +23,7 @@ const PaymentPanel = ({ onClose, onPaymentComplete }) => {
   };
 
   const handlePayment = async () => {
-    if (paymentMethod === 'Cash' && parseFloat(amountReceived) < currentBill.total) {
+    if (parseFloat(amountReceived) < currentBill.total) {
       alert('Amount received cannot be less than total amount');
       return;
     }
@@ -32,9 +32,9 @@ const PaymentPanel = ({ onClose, onPaymentComplete }) => {
 
     try {
       const paymentDetails = {
-        method: paymentMethod,
+        method: 'Cash',
         amountPaid: parseFloat(amountReceived),
-        changeReturned: paymentMethod === 'Cash' ? calculateChange() : 0
+        changeReturned: calculateChange()
       };
 
       const invoice = await processPayment(paymentDetails);
@@ -46,12 +46,7 @@ const PaymentPanel = ({ onClose, onPaymentComplete }) => {
     }
   };
 
-  const paymentMethods = [
-    { id: 'Cash', label: 'Cash', icon: DollarSign, color: '#10b981' },
-    { id: 'Card', label: 'Card', icon: CreditCard, color: '#3b82f6' },
-    { id: 'UPI', label: 'UPI', icon: Smartphone, color: '#8b5cf6' },
-    { id: 'Wallet', label: 'Wallet', icon: Wallet, color: '#f59e0b' }
-  ];
+  // Removed payment method options - only Cash payment supported
 
   return (
     <div className="modal-overlay">
@@ -87,125 +82,67 @@ const PaymentPanel = ({ onClose, onPaymentComplete }) => {
             </div>
           </div>
 
-          {/* Payment Method Selection */}
-          <div className="payment-method-selection">
-            <h4>Select Payment Method</h4>
-            <div className="payment-methods-grid">
-              {paymentMethods.map((method) => {
-                const IconComponent = method.icon;
-                return (
-                  <button
-                    key={method.id}
-                    className={`payment-method-btn ${paymentMethod === method.id ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod(method.id)}
-                    style={{ '--method-color': method.color }}
-                  >
-                    <IconComponent size={24} />
-                    <span>{method.label}</span>
-                  </button>
-                );
-              })}
+          {/* Payment Method - Cash Only */}
+          <div className="payment-method-info">
+            <h4>Payment Method: Cash</h4>
+            <p>Only cash payments are accepted at this time.</p>
+          </div>
+
+          {/* Cash Payment Section */}
+          <div className="cash-payment-section">
+            <h4>Cash Payment</h4>
+            <div className="amount-input-section">
+              <div className="form-group">
+                <label>Amount Received</label>
+                <input
+                  type="number"
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(e.target.value)}
+                  className="amount-input"
+                  step="1"
+                  min={currentBill.total}
+                />
+              </div>
+
+              <div className="change-calculation">
+                <div className="change-row">
+                  <span>Total Amount:</span>
+                  <span>{formatCurrency(currentBill.total)}</span>
+                </div>
+                <div className="change-row">
+                  <span>Amount Received:</span>
+                  <span>{formatCurrency(parseFloat(amountReceived) || 0)}</span>
+                </div>
+                <div className="change-row change">
+                  <span>Change to Return:</span>
+                  <span>{formatCurrency(calculateChange())}</span>
+                </div>
+              </div>
+
+              {/* Quick Amount Buttons */}
+              <div className="quick-amounts">
+                <h5>Quick Amounts</h5>
+                <div className="quick-amount-buttons">
+                  {[
+                    currentBill.total,
+                    Math.ceil(currentBill.total / 50) * 50,
+                    Math.ceil(currentBill.total / 100) * 100,
+                    Math.ceil(currentBill.total / 500) * 500
+                  ].map((amount, index) => (
+                    <button
+                      key={index}
+                      className="quick-amount-btn"
+                      onClick={() => setAmountReceived(amount.toString())}
+                    >
+                      {formatCurrency(amount)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Amount Input for Cash */}
-          {paymentMethod === 'Cash' && (
-            <div className="cash-payment-section">
-              <h4>Cash Payment</h4>
-              <div className="amount-input-section">
-                <div className="form-group">
-                  <label>Amount Received</label>
-                  <input
-                    type="number"
-                    value={amountReceived}
-                    onChange={(e) => setAmountReceived(e.target.value)}
-                    className="amount-input"
-                    step="1"
-                    min={currentBill.total}
-                  />
-                </div>
-                
-                <div className="change-calculation">
-                  <div className="change-row">
-                    <span>Total Amount:</span>
-                    <span>{formatCurrency(currentBill.total)}</span>
-                  </div>
-                  <div className="change-row">
-                    <span>Amount Received:</span>
-                    <span>{formatCurrency(parseFloat(amountReceived) || 0)}</span>
-                  </div>
-                  <div className="change-row change">
-                    <span>Change to Return:</span>
-                    <span>{formatCurrency(calculateChange())}</span>
-                  </div>
-                </div>
 
-                {/* Quick Amount Buttons */}
-                <div className="quick-amounts">
-                  <h5>Quick Amounts</h5>
-                  <div className="quick-amount-buttons">
-                    {[
-                      currentBill.total,
-                      Math.ceil(currentBill.total / 50) * 50,
-                      Math.ceil(currentBill.total / 100) * 100,
-                      Math.ceil(currentBill.total / 500) * 500
-                    ].map((amount, index) => (
-                      <button
-                        key={index}
-                        className="quick-amount-btn"
-                        onClick={() => setAmountReceived(amount.toString())}
-                      >
-                        {formatCurrency(amount)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Card Payment */}
-          {paymentMethod === 'Card' && (
-            <div className="card-payment-section">
-              <h4>Card Payment</h4>
-              <div className="card-info">
-                <p>Amount to be charged: <strong>{formatCurrency(currentBill.total)}</strong></p>
-                <p>Please swipe/insert the card and follow the instructions on the card reader.</p>
-              </div>
-            </div>
-          )}
-
-          {/* UPI Payment */}
-          {paymentMethod === 'UPI' && (
-            <div className="upi-payment-section">
-              <h4>UPI Payment</h4>
-              <div className="upi-info">
-                <p>Amount to be paid: <strong>{formatCurrency(currentBill.total)}</strong></p>
-                <p>Show QR code to customer or ask for UPI ID for payment.</p>
-                <div className="upi-options">
-                  <button className="btn btn-outline">Generate QR Code</button>
-                  <button className="btn btn-outline">Send Payment Link</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Wallet Payment */}
-          {paymentMethod === 'Wallet' && (
-            <div className="wallet-payment-section">
-              <h4>Wallet Payment</h4>
-              <div className="wallet-info">
-                <p>Amount to be paid: <strong>{formatCurrency(currentBill.total)}</strong></p>
-                <p>Select wallet provider and process payment.</p>
-                <div className="wallet-options">
-                  <button className="btn btn-outline">Paytm</button>
-                  <button className="btn btn-outline">PhonePe</button>
-                  <button className="btn btn-outline">Google Pay</button>
-                  <button className="btn btn-outline">Amazon Pay</button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Customer Information */}
           {currentBill.customer && (
@@ -226,13 +163,13 @@ const PaymentPanel = ({ onClose, onPaymentComplete }) => {
           <button className="btn btn-outline" onClick={onClose}>
             Cancel
           </button>
-          <button 
+          <button
             className={`btn btn-primary ${processing ? 'loading' : ''}`}
             onClick={handlePayment}
-            disabled={processing || (paymentMethod === 'Cash' && parseFloat(amountReceived) < currentBill.total)}
+            disabled={processing || parseFloat(amountReceived) < currentBill.total}
           >
             <Calculator size={16} />
-            {processing ? 'Processing...' : `Process ${paymentMethod} Payment`}
+            {processing ? 'Processing...' : 'Process Cash Payment'}
           </button>
         </div>
       </div>

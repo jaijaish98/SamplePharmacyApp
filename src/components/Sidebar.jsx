@@ -62,7 +62,7 @@ const Sidebar = ({ activeSection, setActiveSection }) => {
         </ul>
       </nav>
       
-      <div className="sidebar-footer">
+      {/* <div className="sidebar-footer">
         <div className="user-info">
           <div className="user-avatar">
             <Users size={20} />
@@ -72,7 +72,7 @@ const Sidebar = ({ activeSection, setActiveSection }) => {
             <p className="user-role">Pharmacist</p>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

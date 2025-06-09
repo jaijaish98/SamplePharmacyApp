@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
+import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
@@ -16,6 +17,28 @@ import './App.css'
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
+
+  const handleLogin = (userData) => {
+    setUser(userData)
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    setUser(null)
+    setIsAuthenticated(false)
+    setActiveSection('dashboard')
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <ThemeProvider>
+        <Login onLogin={handleLogin} />
+      </ThemeProvider>
+    )
+  }
 
   const renderContent = () => {
     switch (activeSection) {
@@ -49,7 +72,7 @@ function App() {
       <div className="app">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
         <div className="main-content">
-          <Header activeSection={activeSection} />
+          <Header activeSection={activeSection} user={user} onLogout={handleLogout} />
           <main className="content">
             {renderContent()}
           </main>
