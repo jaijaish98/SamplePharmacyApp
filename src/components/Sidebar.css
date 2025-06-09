@@ -213,7 +213,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .sidebar {
-    width: 100%;
+    width: 280px;
     position: fixed;
     top: 0;
     left: 0;
@@ -221,9 +221,60 @@
     z-index: 1000;
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   }
-  
+
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .sidebar-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .pharmacy-name h1 {
+    font-size: 1.5rem;
+  }
+
+  .pharmacy-name h2 {
+    font-size: 1rem;
+  }
+
+  .nav-item {
+    padding: 0.75rem 1rem;
+  }
+
+  .nav-item span {
+    font-size: 0.875rem;
+  }
+
+  .user-profile {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 260px;
+  }
+
+  .sidebar-header {
+    padding: 1rem 0.75rem;
+  }
+
+  .pharmacy-name h1 {
+    font-size: 1.25rem;
+  }
+
+  .pharmacy-name h2 {
+    font-size: 0.875rem;
+  }
+
+  .nav-item {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .nav-item span {
+    font-size: 0.8rem;
   }
 }

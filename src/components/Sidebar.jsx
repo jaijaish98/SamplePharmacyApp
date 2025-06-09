@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import './Sidebar.css'
 
-const Sidebar = ({ activeSection, setActiveSection }) => {
+const Sidebar = ({ activeSection, setActiveSection, isOpen, onClose }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'inventory', label: 'Inventory Management', icon: Package },
@@ -26,8 +26,15 @@ const Sidebar = ({ activeSection, setActiveSection }) => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
+  const handleNavClick = (sectionId) => {
+    setActiveSection(sectionId)
+    if (onClose) {
+      onClose() // Close sidebar on mobile after navigation
+    }
+  }
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="pharmacy-logo">
           <div className="logo-icon">
@@ -51,7 +58,7 @@ const Sidebar = ({ activeSection, setActiveSection }) => {
               <li key={item.id} className="nav-item">
                 <button
                   className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => handleNavClick(item.id)}
                 >
                   <IconComponent size={20} className="nav-icon" />
                   <span className="nav-text">{item.label}</span>

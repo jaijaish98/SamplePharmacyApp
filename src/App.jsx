@@ -19,6 +19,7 @@ function App() {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const handleLogin = (userData) => {
     setUser(userData)
@@ -29,6 +30,14 @@ function App() {
     setUser(null)
     setIsAuthenticated(false)
     setActiveSection('dashboard')
+  }
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
+  }
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false)
   }
 
   // Show login page if not authenticated
@@ -70,13 +79,24 @@ function App() {
   return (
     <ThemeProvider>
       <div className="app">
-        <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        <Sidebar
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+        />
         <div className="main-content">
-          <Header activeSection={activeSection} user={user} onLogout={handleLogout} />
+          <Header
+            activeSection={activeSection}
+            user={user}
+            onLogout={handleLogout}
+            onToggleSidebar={toggleSidebar}
+          />
           <main className="content">
             {renderContent()}
           </main>
         </div>
+        {isSidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar}></div>}
       </div>
     </ThemeProvider>
   )

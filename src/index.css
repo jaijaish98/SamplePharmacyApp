@@ -143,3 +143,56 @@ button, input, select, textarea, .card, .panel, .modal {
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: var(--border-light);
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  #root {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Ensure proper touch targets */
+  button, input, select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Responsive text sizes */
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+  h4 { font-size: 1rem; }
+
+  /* Responsive spacing */
+  .container {
+    padding: 0.5rem;
+  }
+
+  /* Responsive cards */
+  .card, .panel, .modal {
+    margin: 0.5rem;
+    border-radius: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  /* Extra small screens */
+  h1 { font-size: 1.25rem; }
+  h2 { font-size: 1.125rem; }
+  h3 { font-size: 1rem; }
+  h4 { font-size: 0.875rem; }
+
+  /* Tighter spacing on very small screens */
+  .container {
+    padding: 0.25rem;
+  }
+}

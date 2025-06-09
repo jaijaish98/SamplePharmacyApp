@@ -2,7 +2,7 @@ import { Search, Bell, User, Menu, LogOut } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import './Header.css'
 
-const Header = ({ activeSection, user, onLogout }) => {
+const Header = ({ activeSection, user, onLogout, onToggleSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
 
@@ -45,7 +45,7 @@ const Header = ({ activeSection, user, onLogout }) => {
   return (
     <header className="header">
       <div className="header-left">
-        <button className="mobile-menu-btn">
+        <button className="mobile-menu-btn" onClick={onToggleSidebar}>
           <Menu size={24} />
         </button>
         <div className="header-info">

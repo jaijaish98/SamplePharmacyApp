@@ -37,13 +37,58 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
   .main-content {
     margin-left: 0;
     width: 100%;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .content {
     padding: 1rem;
-    height: calc(100vh - 60px); /* Adjust for mobile header */
+    height: auto;
+    min-height: calc(100vh - 60px);
+    overflow-y: visible;
+  }
+
+  .coming-soon {
+    min-height: 200px;
+    font-size: 1rem;
+    margin: 1rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 0.5rem;
+  }
+
+  .coming-soon {
+    min-height: 150px;
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
+  }
+}
+
+/* Sidebar Overlay for Mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
   }
 }
